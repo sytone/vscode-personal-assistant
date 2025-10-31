@@ -1,0 +1,321 @@
+{
+  "name": "personal-assistant",
+  "displayName": "Personal Assistant",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "chatParticipants": [
+      {
+        "id": "personal-assistant.journal",
+        "fullName": "Journal",
+        "name": "journal",
+        "description": "How can I assist you with your journal?",
+        "isSticky": true,
+        "commands": [
+          {
+            "name": "randomTeach",
+            "description": "Pick at random a computer science concept then explain it in purfect way of a cat"
+          },
+          {
+            "name": "play",
+            "description": "Do whatever you want, you are a cat after all",
+            "disambiguation": [
+              {
+                "category": "cat_play",
+                "description": "The user just wants to relax and see the cat play.",
+                "examples": [
+                  "Enough learning, let the cat play with a ball of yarn",
+                  "Can you show me a cat playing with a laser pointer?"
+                ]
+              }
+            ]
+          }
+        ],
+        "disambiguation": [
+          {
+            "category": "journal",
+            "description": "The user wants to interact with their journal.",
+            "examples": [
+              "Add an entry to my journal for today saying I talked to fred about widgets and should follow up with mary.",
+              "Read my journal entries from last week and summarize any tasks I need to follow up on.",
+              "What did I do last month according to my journal?",
+              "Add a note to my journal for tomorrow to buy groceries.",
+              "List all journal entries that mention the project deadline."
+            ]
+          }
+        ]
+      }
+    ],
+    "configuration": {
+      "title": "Personal Assistant",
+      "id": "personal-assistant",
+      "properties": {
+        "personal-assistant.journalFolderName": {
+          "default": "1 Journal",
+          "description": "The path from the root of the vault that your journal entries live in.",
+          "type": "string"
+        },
+        "personal-assistant.vaultPath": {
+          "default": "",
+          "description": "The path to the root of the vault your personal information lives in.",
+          "type": "string"
+        },
+        "personal-assistant.journalTasksHeading": {
+          "default": "## Tasks This Week",
+          "description": "The heading for the tasks section in your journal.",
+          "type": "string"
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "personal-assistant.helloWorld",
+        "category": "Personal Assistant",
+        "title": "Hello World"
+      },
+      {
+        "command": "personal-assistant.displayConfiguration",
+        "category": "Personal Assistant",
+        "title": "Configuration Details"
+      }
+    ],
+    "languageModelTools": [
+      {
+        "name": "journal-tools_readJournalEntries",
+        "tags": [
+          "journal",
+          "journal-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "readJournalEntries",
+        "displayName": "Get Journal Entries",
+        "modelDescription": "Read journal entries from a markdown-based knowledge store.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "journalPath": {
+              "type": "string",
+              "description": "Name of the folder that contains the journal files, relative to vault root. Defaults to '1 Journal'."
+            },
+            "fromDate": {
+              "type": "string",
+              "description": "Start date (YYYY-MM-DD). Optional."
+            },
+            "toDate": {
+              "type": "string",
+              "description": "End date (YYYY-MM-DD). Optional."
+            },
+            "maxEntries": {
+              "type": "number",
+              "description": "Maximum number of journal entries to return. Optional."
+            },
+            "includeContent": {
+              "type": "boolean",
+              "description": "Whether to include the full content of each journal entry. Defaults to false."
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "journal-tools_addJournalEntry",
+        "tags": [
+          "journal",
+          "journal-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "addJournalEntry",
+        "displayName": "Add Journal Entry",
+        "modelDescription": "Add an entry to the weekly journal file for a given date (defaults to today). If a matching day heading exists (e.g., '## 14 Thursday'), the entry is appended under it; otherwise it's appended to the end of the file.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "entryContent": {
+              "type": "string",
+              "description": "The content of the journal entry."
+            },
+            "journalPath": {
+              "type": "string",
+              "description": "Name of the folder that contains the journal files, relative to vault root. Defaults to '1 Journal'."
+            },
+            "date": {
+              "type": "string",
+              "description": "Target date in YYYY-MM-DD. Optional; defaults to today."
+            }
+          },
+          "required": [
+            "entryContent"
+          ]
+        }
+      },
+      {
+        "name": "journal-tools_addJournalTask",
+        "tags": [
+          "journal",
+          "journal-tools",
+          "personal-assistant",
+          "tasks"
+        ],
+        "toolReferenceName": "addJournalTask",
+        "displayName": "Add Journal Task",
+        "modelDescription": "Add a task or action item to the weekly journal under a configurable tasks heading (default: '## Tasks This Week') as a markdown checkbox. Useful for tracking action items from conversations.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "taskDescription": {
+              "type": "string",
+              "description": "The task description to add."
+            },
+            "journalPath": {
+              "type": "string",
+              "description": "Name of the folder that contains the journal files, relative to vault root. Defaults to '1 Journal'."
+            },
+            "date": {
+              "type": "string",
+              "description": "Target date in YYYY-MM-DD to determine which week. Optional; defaults to today."
+            },
+            "completed": {
+              "type": "boolean",
+              "description": "Mark task as completed. Defaults to false (unchecked)."
+            }
+          },
+          "required": [
+            "taskDescription"
+          ]
+        }
+      },
+      {
+        "name": "date-utility-tools_calculateRelativeDate",
+        "tags": [
+          "date",
+          "date-utility",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "calculateRelativeDate",
+        "displayName": "Calculate Relative Date",
+        "modelDescription": "Calculate an exact date from a relative description (e.g., 'today', 'last Wednesday', 'next Monday', 'two weeks ago'). Returns the date and day of the week for verification.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "relativeDateDescription": {
+              "type": "string",
+              "description": "The relative date description (e.g., 'today', 'last Wednesday', 'next Friday', 'yesterday', 'two weeks ago')."
+            },
+            "referenceDate": {
+              "type": "string",
+              "description": "Optional reference date in YYYY-MM-DD format. If not provided, uses today's date."
+            }
+          },
+          "required": [
+            "relativeDateDescription"
+          ]
+        }
+      },
+      {
+        "name": "date-utility-tools_getDateInfo",
+        "tags": [
+          "date",
+          "date-utility",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "getDateInfo",
+        "displayName": "Get Date Information",
+        "modelDescription": "Get information about a specific date including day of week, ISO week number, and relative position to today.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "The date to get information about in YYYY-MM-DD format."
+            }
+          },
+          "required": [
+            "date"
+          ]
+        }
+      },
+      {
+        "name": "date-utility-tools_getWeekDates",
+        "tags": [
+          "date",
+          "date-utility",
+          "personal-assistant",
+          "journal"
+        ],
+        "toolReferenceName": "getWeekDates",
+        "displayName": "Get Week Dates",
+        "modelDescription": "Get all dates in the current week (or a specific week) with their day names. Useful for planning journal entries.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "date": {
+              "type": "string",
+              "description": "Optional date in YYYY-MM-DD format to get the week for. Defaults to current week."
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "chat-tools-sample_runInTerminal",
+        "tags": [
+          "terminal",
+          "chat-tools-sample"
+        ],
+        "displayName": "Run in Terminal",
+        "modelDescription": "Run a command in a terminal and return the output",
+        "canBeReferencedInPrompt": false,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string",
+              "description": "The command to run"
+            }
+          },
+          "required": [
+            "command"
+          ]
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.105.0",
+    "@typescript-eslint/eslint-plugin": "^8.45.0",
+    "@typescript-eslint/parser": "^8.45.0",
+    "@vscode/test-cli": "^0.0.11",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.36.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@vscode/chat-extension-utils": "^0.0.0-alpha.1",
+    "@vscode/prompt-tsx": "^0.3.0-alpha.14",
+    "markdownlint": "^0.39.0"
+  }
+}

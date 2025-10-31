@@ -1,0 +1,34 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+	"files.exclude": {
+		"out": false // set this to true to hide the "out" folder with the compiled JS files
+	},
+	"search.exclude": {
+		"out": true // set this to false to include "out" folder in search results
+	},
+	// Turn off tsc task auto detection since we have the necessary tasks as npm scripts
+	"typescript.tsc.autoDetect": "off",
+	"github.copilot.chat.commitMessageGeneration.instructions": [
+		{
+			"text": "Use conventional commit format: type(scope): description."
+		},
+		{
+			"text": "Use imperative mood: 'Add feature' not 'Added feature'."
+		},
+		{
+			"text": "Keep subject line under 50 characters."
+		},
+		{
+			"text": "Use types: feat, fix, docs, style, refactor, perf, test, chore, ci."
+		},
+		{
+			"text": "Include scope when relevant (e.g., api, ui, auth)."
+		},
+		{
+			"text": "For additional details, use a well-structured body section."
+		},
+		{
+			"text": "Use bullet points (-) for clarity."
+		}
+	]
+}

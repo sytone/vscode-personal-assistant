@@ -1,0 +1,14 @@
+{
+  // See http://go.microsoft.com/fwlink/?LinkId=827846
+  // for the documentation about the extensions.json format
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "ms-vscode.extension-test-runner",
+    "ms-vscode-remote.remote-containers",
+    "github.copilot",
+    "github.copilot-chat",
+    "codetrek.haystack-search",
+    "spmeesseman.vscode-taskexplorer",
+    "yzhang.markdown-all-in-one"
+  ]
+}

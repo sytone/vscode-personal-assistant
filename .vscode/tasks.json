@@ -16,6 +16,25 @@
         "kind": "build",
         "isDefault": true
       }
+    },
+    {
+      "label": "versionlens npm install", // task label name
+      "command": "npm",
+      "type": "shell",
+      "args": [
+        "install"
+      ],
+      "options": {
+        // sets the cwd to the current file dir
+        "cwd": "${fileDirname}"
+      },
+      // customizable settings
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "panel": "shared",
+        "clear": true,
+      },
     }
   ]
 }

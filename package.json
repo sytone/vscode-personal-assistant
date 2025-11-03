@@ -72,6 +72,18 @@
           "default": "## Tasks This Week",
           "description": "The heading for the tasks section in your journal.",
           "type": "string"
+        },
+        "personal-assistant.allowNoteDeletion": {
+          "default": false,
+          "description": "Allow AI agents to delete notes. When false, deletion attempts will be rejected with an error message.",
+          "type": "boolean"
+        },
+        "personal-assistant.contentPreviewLength": {
+          "default": 200,
+          "description": "Number of characters to show in content previews when searching notes. Range: 50-2000.",
+          "type": "number",
+          "minimum": 50,
+          "maximum": 2000
         }
       }
     },
@@ -291,6 +303,291 @@
             "command"
           ]
         }
+      },
+      {
+        "name": "note-management-tools_listFiles",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant",
+          "search"
+        ],
+        "toolReferenceName": "listFiles",
+        "displayName": "List Files",
+        "modelDescription": "List all markdown files in the vault or a specific folder. Use this to discover available notes. Set includeContent=false (default) for efficiency.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "folderPath": {
+              "type": "string",
+              "description": "Optional folder path relative to vault root to filter results. If not specified, lists all files in vault."
+            },
+            "includeContent": {
+              "type": "boolean",
+              "description": "Whether to include content preview for each file. Defaults to false for efficiency."
+            }
+          },
+          "required": []
+        }
+      },
+      {
+        "name": "note-management-tools_searchFilesByName",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant",
+          "search"
+        ],
+        "toolReferenceName": "searchFilesByName",
+        "displayName": "Search Files by Name",
+        "modelDescription": "Search for markdown files by filename pattern (case-insensitive substring match). Use this when user mentions a file name. Set includeContent=false (default) for efficiency.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "namePattern": {
+              "type": "string",
+              "description": "The filename pattern to search for (case-insensitive substring match)."
+            },
+            "includeContent": {
+              "type": "boolean",
+              "description": "Whether to include content preview for matching files. Defaults to false for efficiency."
+            }
+          },
+          "required": [
+            "namePattern"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_searchFilesByContent",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant",
+          "search"
+        ],
+        "toolReferenceName": "searchFilesByContent",
+        "displayName": "Search Files by Content",
+        "modelDescription": "Search for markdown files containing specific text (case-insensitive full-text search). Use two-phase workflow: first search with includeContent=false to find matches, then use readNote for specific files.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "searchText": {
+              "type": "string",
+              "description": "The text to search for within file contents (case-insensitive)."
+            },
+            "includeContent": {
+              "type": "boolean",
+              "description": "Whether to include full content for matching files. Defaults to false for efficiency. Use readNote tool for specific files instead."
+            }
+          },
+          "required": [
+            "searchText"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_searchNotesByFrontmatter",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant",
+          "search",
+          "frontmatter",
+          "metadata"
+        ],
+        "toolReferenceName": "searchNotesByFrontmatter",
+        "displayName": "Search Notes by Frontmatter",
+        "modelDescription": "Search for notes by YAML frontmatter key/value. Can check for key existence (omit value) or exact value match. Use for filtering notes by tags, status, or other metadata.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "key": {
+              "type": "string",
+              "description": "The frontmatter key to search for (e.g., 'tag', 'status', 'title')."
+            },
+            "value": {
+              "type": "string",
+              "description": "Optional value for exact match. If not specified, searches for any note with the key."
+            },
+            "includeContent": {
+              "type": "boolean",
+              "description": "Whether to include content preview for matching notes. Defaults to false for efficiency."
+            }
+          },
+          "required": [
+            "key"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_readNote",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "readNote",
+        "displayName": "Read Note",
+        "modelDescription": "Read the full content and frontmatter of a specific note. Use this after finding notes with search tools to get complete content.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notePath": {
+              "type": "string",
+              "description": "Path to the note file relative to vault root (e.g., 'folder/note.md' or 'note.md')."
+            }
+          },
+          "required": [
+            "notePath"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_createNote",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "createNote",
+        "displayName": "Create Note",
+        "modelDescription": "Create a new markdown note with optional YAML frontmatter. Creates parent directories automatically. Returns error if file already exists.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notePath": {
+              "type": "string",
+              "description": "Path for the new note relative to vault root (e.g., 'projects/2024/note.md')."
+            },
+            "content": {
+              "type": "string",
+              "description": "The markdown content of the note (without frontmatter)."
+            },
+            "frontmatter": {
+              "type": "object",
+              "description": "Optional YAML frontmatter as a key-value object (e.g., {title: 'My Note', tag: 'project'})."
+            }
+          },
+          "required": [
+            "notePath",
+            "content"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_updateNote",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "updateNote",
+        "displayName": "Update Note",
+        "modelDescription": "Update the content of an existing note while preserving its frontmatter. Use updateNoteFrontmatter to modify metadata instead.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notePath": {
+              "type": "string",
+              "description": "Path to the note relative to vault root."
+            },
+            "content": {
+              "type": "string",
+              "description": "The new markdown content (frontmatter will be preserved automatically)."
+            }
+          },
+          "required": [
+            "notePath",
+            "content"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_updateNoteFrontmatter",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant",
+          "frontmatter",
+          "metadata"
+        ],
+        "toolReferenceName": "updateNoteFrontmatter",
+        "displayName": "Update Note Frontmatter",
+        "modelDescription": "Add, update, or delete frontmatter keys in a note. Supports multiple operations in one call. Content is preserved.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notePath": {
+              "type": "string",
+              "description": "Path to the note relative to vault root."
+            },
+            "operations": {
+              "type": "array",
+              "description": "Array of operations to perform on frontmatter.",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "enum": [
+                      "set",
+                      "delete"
+                    ],
+                    "description": "'set' to add/update a key, 'delete' to remove a key."
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "The frontmatter key to operate on."
+                  },
+                  "value": {
+                    "description": "The value to set (required for 'set' action, ignored for 'delete')."
+                  }
+                },
+                "required": [
+                  "action",
+                  "key"
+                ]
+              }
+            }
+          },
+          "required": [
+            "notePath",
+            "operations"
+          ]
+        }
+      },
+      {
+        "name": "note-management-tools_deleteNote",
+        "tags": [
+          "notes",
+          "note-management-tools",
+          "personal-assistant"
+        ],
+        "toolReferenceName": "deleteNote",
+        "displayName": "Delete Note",
+        "modelDescription": "Delete a note file. Requires 'personal-assistant.allowNoteDeletion' setting enabled (default: false). Use with caution.",
+        "canBeReferencedInPrompt": true,
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "notePath": {
+              "type": "string",
+              "description": "Path to the note to delete relative to vault root."
+            }
+          },
+          "required": [
+            "notePath"
+          ]
+        }
       }
     ]
   },
@@ -303,6 +600,7 @@
     "test": "vscode-test"
   },
   "devDependencies": {
+    "@types/mdast": "^4.0.4",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
     "@types/vscode": "^1.105.0",
@@ -316,6 +614,19 @@
   "dependencies": {
     "@vscode/chat-extension-utils": "^0.0.0-alpha.1",
     "@vscode/prompt-tsx": "^0.3.0-alpha.14",
-    "markdownlint": "^0.39.0"
+    "markdownlint": "^0.39.0",
+    "mdast-util-frontmatter": "^2.0.1",
+    "mdast-util-from-markdown": "^2.0.2",
+    "mdast-util-to-markdown": "^2.1.2",
+    "mdast-util-to-string": "^4.0.0",
+    "micromark-extension-frontmatter": "^2.0.0",
+    "remark": "^15.0.1",
+    "remark-frontmatter": "^5.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-stringify": "^11.0.0",
+    "unified": "^11.0.5",
+    "unist-util-visit": "^5.0.0",
+    "vfile": "^6.0.3",
+    "yaml": "^2.6.1"
   }
 }

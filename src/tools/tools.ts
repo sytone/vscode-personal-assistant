@@ -3,6 +3,17 @@ import { FindFilesTool } from "./FindFilesTool";
 import { RunInTerminalTool } from "./RunInTerminalTool";
 import { ReadJournalEntriesTool, AddJournalEntryTool, AddJournalTaskTool } from "./JournalTools";
 import { CalculateRelativeDateTool, GetDateInfoTool, GetWeekDatesTool } from "./DateUtilityTools";
+import {
+  ListFilesTool,
+  SearchFilesByNameTool,
+  SearchFilesByContentTool,
+  SearchNotesByFrontmatterTool,
+  ReadNoteTool,
+  CreateNoteTool,
+  UpdateNoteTool,
+  UpdateNoteFrontmatterTool,
+  DeleteNoteTool,
+} from "./NoteManagementTools";
 
 export function registerChatTools(context: vscode.ExtensionContext) {
   // context.subscriptions.push(vscode.lm.registerTool('chat-tools-sample_tabCount', new TabCountTool()));
@@ -49,6 +60,62 @@ export function registerChatTools(context: vscode.ExtensionContext) {
     vscode.lm.registerTool(
       "date-utility-tools_getWeekDates",
       new GetWeekDatesTool()
+    )
+  );
+
+  // Note Management Tools
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_listFiles",
+      new ListFilesTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_searchFilesByName",
+      new SearchFilesByNameTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_searchFilesByContent",
+      new SearchFilesByContentTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_searchNotesByFrontmatter",
+      new SearchNotesByFrontmatterTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_readNote",
+      new ReadNoteTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_createNote",
+      new CreateNoteTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_updateNote",
+      new UpdateNoteTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_updateNoteFrontmatter",
+      new UpdateNoteFrontmatterTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "note-management-tools_deleteNote",
+      new DeleteNoteTool()
     )
   );
 }

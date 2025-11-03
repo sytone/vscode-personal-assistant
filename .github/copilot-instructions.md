@@ -32,8 +32,48 @@ This project follows a **strict Test-Driven Development** approach:
 - Use TypeScript with strict typing
 - Use async/await for asynchronous operations
 - Use clear, descriptive variable and function names
-- Include JSDoc comments for complex functions
+- **Include comprehensive JSDoc comments for all public APIs, classes, interfaces, and complex functions**
 - Follow existing code patterns in the project
+
+### Documentation Standards
+All TypeScript code must include JSDoc documentation following these guidelines:
+
+**Required Documentation**:
+- **Classes**: Include class-level JSDoc with description, `@remarks` for usage patterns, and `@example` when helpful
+- **Interfaces**: Document the interface purpose and all properties with inline comments
+- **Public Functions**: Include description, `@param` for each parameter, `@returns` for return values, `@remarks` for important behavior
+- **Helper Functions**: Document purpose, parameters, return values, and any security or performance considerations
+- **Complex Logic**: Add inline comments explaining non-obvious algorithms or business rules
+
+**JSDoc Format**:
+```typescript
+/**
+ * Brief one-line description of the function/class/interface.
+ * More detailed explanation if needed (optional).
+ *
+ * @param paramName - Description of the parameter
+ * @returns Description of return value
+ *
+ * @remarks
+ * Additional context about usage patterns, best practices, or important behavior.
+ * Use this section for warnings, performance notes, or security considerations.
+ *
+ * @example
+ * ```typescript
+ * // Usage example showing typical use case
+ * const result = myFunction('input');
+ * ```
+ */
+```
+
+**Documentation Best Practices**:
+- Write descriptions that explain *why* and *what*, not just *how*
+- Include `@remarks` for non-obvious behavior, edge cases, or important context
+- Add `@example` for complex functions or common usage patterns
+- Document security considerations (path validation, input sanitization, etc.)
+- Explain performance implications (recursive operations, large data sets, etc.)
+- Reference related functions or tools when appropriate
+- Keep documentation up-to-date when modifying code
 
 ### File Organization
 - Tools are organized in `src/tools/` directory

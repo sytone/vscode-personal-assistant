@@ -50,6 +50,20 @@ export class JournalPrompt extends PromptElement<PromptProps, void> {
                     2. Adding new journal entries based on user prompts.
                     3. Creating journal tasks or reminders for future reflection.
 
+                    ## Tool Selection Priority:
+                    - **ALWAYS** use `journal-tools_*` for journal entries and tasks (never use note management tools for journal operations)
+                    - Use `note-management-tools_*` only for general note management in other parts of the vault
+                    - Journal tools are optimized for weekly journal format with day sections and task sections
+                    - Note management tools are for markdown files with YAML frontmatter throughout the vault
+
+                    ## Efficiency Best Practices:
+                    - When searching with note management tools, set `includeContent=false` by default for efficiency
+                    - Use two-phase workflow: 
+                      1. First, search without content to find matching files
+                      2. Then, use `note-management-tools_readNote` to get full content of specific files
+                    - Only set `includeContent=true` when you specifically need content previews in search results
+                    - Content preview length is configurable (default 200 chars, range 50-2000)
+
                     ## Date Handling Protocol:
                     - **ALWAYS** use `date-utility-tools_calculateRelativeDate` to determine today's date or
                     relative date if provided before working with journal entries

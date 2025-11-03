@@ -129,6 +129,13 @@ applyTo: '**/*.ts'
 
 ## Documentation & Comments
 
-- Add JSDoc to public APIs; include `@remarks` or `@example` when helpful.
-- Write comments that capture intent, and remove stale notes during refactors.
-- Update architecture or design docs when introducing significant patterns.
+- **Add comprehensive JSDoc to all public APIs, classes, interfaces, and complex functions**
+- Include `@param`, `@returns`, `@remarks`, and `@example` tags as appropriate
+- Write comments that capture intent, and remove stale notes during refactors
+- Update architecture or design docs when introducing significant patterns
+- Document security considerations (input validation, path traversal prevention, etc.)
+- Explain performance implications for recursive operations or large data processing
+- Use `@remarks` for non-obvious behavior, edge cases, or important context
+- Include `@example` blocks showing typical usage patterns for complex functions
+- Document all interface properties with inline comments describing their purpose
+- Keep documentation synchronized with code changes

@@ -9,6 +9,7 @@
     "github.copilot-chat",
     "codetrek.haystack-search",
     "spmeesseman.vscode-taskexplorer",
-    "yzhang.markdown-all-in-one"
+    "yzhang.markdown-all-in-one",
+    "pflannery.vscode-versionlens"
   ]
 }

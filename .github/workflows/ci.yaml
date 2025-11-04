@@ -43,13 +43,16 @@ jobs:
         if: runner.os != 'Linux'
 
   build:
-    name: Build and Package Extension on ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]    
+    name: Build and Package Extension
+    # Not used as of now, but kept for future reference.
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     os: [macos-latest, ubuntu-latest, windows-latest]    
 
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+
 
     # Even though semantic-release will not publish anything, it still needs to
     # validate the GITHUB_TOKEN

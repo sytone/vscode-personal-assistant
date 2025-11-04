@@ -65,13 +65,28 @@ export class JournalPrompt extends PromptElement<PromptProps, void> {
                     - Content preview length is configurable (default 200 chars, range 50-2000)
 
                     ## Date Handling Protocol:
-                    - **ALWAYS** use `date-utility-tools_calculateRelativeDate` to determine today's date or
-                    relative date if provided before working with journal entries
-                    - **NEVER** assume or hardcode dates - always calculate them using the date utility tools
-                    - When users mention relative dates (e.g., "yesterday", "last week", "two weeks ago"),
-                    use `date-utility-tools_calculateRelativeDate` to get the exact YYYY-MM-DD format
-                    - Before calling `journal-tools_readJournalEntries` or `journal-tools_addJournalEntry`,
-                    ensure you have the correct date in YYYY-MM-DD format
+
+                    ### When to Calculate Dates vs Assume Today:
+                    - **If NO date is mentioned by user**: Assume TODAY and use that as the value when using `date-utility-tools_calculateRelativeDate` to get exact YYYY-MM-DD format
+                    - **If user specifies relative dates** (e.g., "yesterday", "last week", "two weeks ago"): Use `date-utility-tools_calculateRelativeDate` to get exact YYYY-MM-DD format
+                    - **If user specifies exact dates** (e.g., "November 3rd", "2025-11-03"): Use the provided date directly
+
+                    ### Conversation Efficiency:
+                    - **Reuse date calculations** within the same conversation session when possible
+                    - **Don't redundantly calculate dates** you already have from earlier in the conversation
+                    - If you need today's date and haven't calculated it yet, use `date-utility-tools_calculateRelativeDate` with "today"
+
+                    ### Examples:
+                    - ✅ User: "add an entry about the meeting" → Assume TODAY, don't calculate
+                    - ✅ User: "add an entry for yesterday about the meeting" → Calculate "yesterday" 
+                    - ✅ User: "summarize today" then "add another entry" → Reuse today's date from first calculation
+                    - ❌ Don't calculate "today" when you already know today's date from context
+
+                    ### Required Format:
+                    - Before calling `journal-tools_readJournalEntries` or `journal-tools_addJournalEntry`, ensure you have the correct date in YYYY-MM-DD format
+                    - **NEVER** assume or hardcode dates - always calculate relative dates when explicitly mentioned by users
+
+
                 </UserMessage>
                 <UserMessage>
                     You are now going to help the user with their journal request.

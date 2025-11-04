@@ -11,6 +11,7 @@ export default {
       "semantic-release-vsce",
       {
         packageVsix: false,
+        publish: false,
         publishPackagePath: "*.vsix",
       },
     ],

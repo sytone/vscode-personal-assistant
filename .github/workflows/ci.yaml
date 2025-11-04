@@ -1,4 +1,4 @@
-name: ci
+name: Continuous Integration
 
 on:
   push:
@@ -15,25 +15,30 @@ permissions:
   contents: read # for checkout
 
 jobs:
-  # test:
-  #   runs-on: ubuntu-latest
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
 
-  #   steps:
-  #     - uses: actions/checkout@v5
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v3
-  #       with:
-  #         node-version: 24
-                
-  #     - run: npm ci
-  #       env:
-  #         BINDL_CURRENT_ONLY: "true"
-  #     - name: Test with VS Code 1.105.0
-  #       uses: GabrielBB/xvfb-action@v1
-  #       env:
-  #         VSCODE_TEST_VERSION: "1.105.0"
-  #       with:
-  #         run: npm test
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 24
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Tests on Linux
+        run: xvfb-run -a npm test
+        if: runner.os == 'Linux'
+
+      - name: Run Tests on Non-Linux
+        run: npm test
+        if: runner.os != 'Linux'
 
   build:
     # strategy:

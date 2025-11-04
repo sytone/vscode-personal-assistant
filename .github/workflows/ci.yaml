@@ -18,6 +18,7 @@ jobs:
   test:
     name: Run Tests on ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
@@ -44,6 +45,7 @@ jobs:
   build:
     name: Build and Package Extension on ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]    
 

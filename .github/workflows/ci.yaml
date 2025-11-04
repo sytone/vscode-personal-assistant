@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   test:
+    name: Run Tests on ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -41,40 +42,12 @@ jobs:
         if: runner.os != 'Linux'
 
   build:
-    # strategy:
-    #   matrix:
-    #     include:
-    #       - os: windows-latest
-    #         target: win32-x64
-    #         npm_config_arch: x64
-    #       - os: windows-latest
-    #         target: win32-arm64
-    #         npm_config_arch: arm64
-    #       - os: ubuntu-latest
-    #         target: linux-x64
-    #         npm_config_arch: x64
-    #       - os: ubuntu-latest
-    #         target: linux-arm64
-    #         npm_config_arch: arm64
-    #       - os: ubuntu-latest
-    #         target: linux-armhf
-    #         npm_config_arch: arm
-    #       - os: ubuntu-latest
-    #         target: alpine-x64
-    #         npm_config_arch: x64
-    #       - os: ubuntu-latest
-    #         target: alpine-arm64
-    #         npm_config_arch: arm64
-    #       - os: macos-latest
-    #         target: darwin-x64
-    #         npm_config_arch: x64
-    #       - os: macos-latest
-    #         target: darwin-arm64
-    #         npm_config_arch: arm64
-    #       - os: ubuntu-latest
-    #         target: universal
-    # runs-on: ${{ matrix.os }}  
-    runs-on: ubuntu-latest
+    name: Build and Package Extension on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]    
+
+    runs-on: ${{ matrix.os }}
 
     # Even though semantic-release will not publish anything, it still needs to
     # validate the GITHUB_TOKEN
@@ -91,26 +64,11 @@ jobs:
         with:
           node-version: 24
 
-      # - if: matrix.target != 'universal'
-      #   name: Install dependencies (with binaries)
-      #   run: npm ci
-      #   env:
-      #     npm_config_arch: ${{ matrix.npm_config_arch }}
-      # - if: matrix.target == 'universal'
-      #   name: Install dependencies (without binaries)
-      #   run: npm ci
-
       - name: Install Dependencies
         run: npm ci
 
-      # - run: npx semantic-release --extends ./package.release.config.mjs
-      #   env:
-      #     VSCE_TARGET: ${{ matrix.target }}
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - run: npx semantic-release --extends ./package.release.config.mjs
         env:
-          VSCE_TARGET: 'universal'
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # - uses: actions/upload-artifact@v5
@@ -125,14 +83,6 @@ jobs:
 
       # vsce updates the version in package.json and package-lock.json during
       # package step, so we need to save them for the publish step
-      # - if: matrix.target == 'universal'
-      #   uses: actions/upload-artifact@v5
-      #   with:
-      #     name: package-json
-      #     path: |
-      #       package.json
-      #       package-lock.json
-
       - uses: actions/upload-artifact@v5
         with:
           name: package-json
@@ -142,6 +92,7 @@ jobs:
 
   release:
     if: github.event_name != 'schedule'
+    name: Publish Release
 
     # needs: [test, build]
     needs: build

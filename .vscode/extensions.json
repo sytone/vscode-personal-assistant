@@ -10,6 +10,7 @@
     "codetrek.haystack-search",
     "spmeesseman.vscode-taskexplorer",
     "yzhang.markdown-all-in-one",
-    "pflannery.vscode-versionlens"
+    "pflannery.vscode-versionlens",
+    "connor4312.esbuild-problem-matchers"
   ]
 }

@@ -1,8 +1,19 @@
 {
   "name": "personal-assistant",
   "displayName": "Personal Assistant",
-  "description": "",
+  "description": "A VS Code extension that integrates with Obsidian vaults and GitHub Copilot to provide intelligent tools for managing journals, notes, and personal knowledge. Leverage AI assistance for reading, writing, and organizing your markdown-based knowledge base.",
+  "publisher": "sytone",
+  "author": "Jon Bullen <github@sytone.com> (https://github.com/sytone)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sytone/vscode-personal-assistant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sytone/vscode-personal-assistant/issues"
+  },
+  "homepage": "https://github.com/sytone/vscode-personal-assistant#readme",
   "version": "0.0.1",
+  "license": "MIT",
   "engines": {
     "vscode": "^1.105.0"
   },
@@ -10,7 +21,7 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./dist/extension",
   "contributes": {
     "chatParticipants": [
       {
@@ -592,14 +603,24 @@
     ]
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile && npm run lint",
+    "old:vscode:prepublish": "npm run compile",
+    "old:compile": "tsc -p ./",
+    "old:watch": "tsc -watch -p ./",
+    "compile-tests": "tsc -p . --outDir out",
+    "pretest": "npm run compile-tests",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "compile": "npm run check-types && node esbuild.js",
+    "check-types": "tsc --noEmit",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "vscode:prepublish": "npm run package",
+    "package": "npm run check-types && node esbuild.js --production"
   },
   "devDependencies": {
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
     "@types/mdast": "^4.0.4",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
@@ -608,15 +629,20 @@
     "@typescript-eslint/parser": "^8.45.0",
     "@vscode/test-cli": "^0.0.11",
     "@vscode/test-electron": "^2.5.2",
+    "conventional-changelog-conventionalcommits": "^9.1.0",
+    "esbuild": "^0.25.12",
     "eslint": "^9.36.0",
+    "semantic-release": "^25.0.1",
+    "semantic-release-stop-before-publish": "^2.0.0",
+    "semantic-release-vsce": "^6.0.13",
     "typescript": "^5.9.3"
   },
   "dependencies": {
     "@vscode/chat-extension-utils": "^0.0.0-alpha.1",
     "@vscode/prompt-tsx": "^0.3.0-alpha.14",
     "markdownlint": "^0.39.0",
-    "mdast-util-frontmatter": "^2.0.1",
     "mdast-util-from-markdown": "^2.0.2",
+    "mdast-util-frontmatter": "^2.0.1",
     "mdast-util-to-markdown": "^2.1.2",
     "mdast-util-to-string": "^4.0.0",
     "micromark-extension-frontmatter": "^2.0.0",

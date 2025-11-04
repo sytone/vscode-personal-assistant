@@ -1,71 +1,138 @@
-# personal-assistant README
+# Personal Assistant for VS Code
 
-This is the README for your extension "personal-assistant". After writing up a brief description, we recommend including the following sections.
+A VS Code extension that integrates with Obsidian vaults and GitHub Copilot to provide intelligent tools for managing journals, notes, and personal knowledge. Leverage AI assistance for reading, writing, and organizing your markdown-based knowledge base.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+### 📓 Journal Management
+- **Add Journal Entries**: Create timestamped entries in ISO week-formatted journal files (YYYY-Www.md)
+- **Read Journal Entries**: Query and retrieve journal entries by date range with AI-powered search
+- **Task Tracking**: Add and manage tasks within your weekly journal with markdown checkboxes
+- **Weekly Structure**: Automatic organization by ISO week with day-based sections
 
-For example if there is an image subfolder under your extension project workspace:
+### 📝 Note Management
+- **List Files**: Browse all markdown files in your vault or specific folders
+- **Search by Name**: Find notes using filename patterns (case-insensitive)
+- **Search by Content**: Full-text search across all notes
+- **Frontmatter Search**: Query notes by YAML frontmatter metadata (tags, status, custom fields)
+- **CRUD Operations**: Create, read, update, and delete notes with path traversal protection
+- **Frontmatter Management**: Update note metadata without modifying content
 
-\!\[feature X\]\(images/feature-x.png\)
+### 📅 Date Utilities
+- **Relative Date Calculation**: Parse natural language dates ("last Wednesday", "two weeks ago")
+- **Date Information**: Get day of week, ISO week number, and relative position to today
+- **Week Planning**: Retrieve all dates in a week with day names for journal planning
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### 🤖 GitHub Copilot Integration
+- **Chat Participant**: Use `@journal` in Copilot Chat to interact with your journal
+- **Language Model Tools**: All features accessible to AI agents through structured tool APIs
+- **Context-Aware**: AI can read your notes and journals to provide informed assistance
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- VS Code version 1.105.0 or higher
+- GitHub Copilot subscription (for chat participant features)
+- An Obsidian vault or markdown-based knowledge base (optional but recommended)
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
 This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+* `personal-assistant.vaultPath`: Path to your Obsidian vault root directory. If not set, uses the first workspace folder containing an `.obsidian` folder.
+* `personal-assistant.journalFolderName`: Folder name for journal files relative to vault root (default: `"1 Journal"`).
+* `personal-assistant.journalTasksHeading`: Heading for tasks section in journals (default: `"## Tasks This Week"`).
+* `personal-assistant.allowNoteDeletion`: Allow AI agents to delete notes (default: `false`). Enable with caution.
+* `personal-assistant.contentPreviewLength`: Number of characters in content previews when searching (default: `200`, range: 50-2000).
+
+## Getting Started
+
+1. **Configure Vault Path**: Set `personal-assistant.vaultPath` to point to your Obsidian vault, or open your vault as a workspace folder
+2. **Open Copilot Chat**: Press `Ctrl+Alt+I` (Windows/Linux) or `Cmd+Alt+I` (macOS)
+3. **Start with Journal**: Type `@journal` to interact with your journal
+4. **Try Commands**:
+   - "Add an entry to my journal about today's meeting with the team"
+   - "What did I do last week according to my journal?"
+   - "Add a task to follow up with Sarah about the project"
+   - "Search my notes for information about TypeScript"
+
+## Example Usage
+
+### Journal Entry
+```
+@journal Add an entry: Met with the design team to discuss Q1 roadmap. 
+Key decisions: Focus on mobile experience, defer analytics dashboard.
+```
+
+### Task Management
+```
+@journal Add a task: Review PR #145 and provide feedback by Friday
+```
+
+### Note Search
+```
+@journal Find notes about "machine learning" and summarize key concepts
+```
+
+### Date Queries
+```
+@journal What's the date for next Tuesday?
+```
+
+## Commands
+
+- **Personal Assistant: Hello World** - Test command to verify extension is active
+- **Personal Assistant: Configuration Details** - Display current configuration and vault path
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- Journal files must follow ISO week format (YYYY-Www.md) for proper date parsing
+- Path normalization on Windows may show backslashes in some error messages
+- Large vaults (>1000 files) may experience slower initial indexing
+
+Please report issues on the [GitHub repository](https://github.com/sytone/vscode-personal-assistant/issues).
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+### 0.0.1
 
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial development release featuring:
+- Journal management tools (read, write, tasks)
+- Note management tools (CRUD operations, search)
+- Date utility tools (relative dates, week planning)
+- GitHub Copilot chat participant integration
+- Obsidian vault integration
+- Test-driven development with comprehensive test coverage
 
 ---
 
-## Following extension guidelines
+## Development
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+This extension follows Test-Driven Development (TDD) practices with comprehensive test coverage. See [.github/copilot-instructions.md](.github/copilot-instructions.md) for development guidelines.
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
+### Building from Source
 
-## Working with Markdown
+```bash
+npm install
+npm run compile
+npm test
+```
 
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
+### Packaging
 
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
+```bash
+npm run vscode:prepublish
+vsce package
+```
 
-## For more information
+## Contributing
 
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
+Contributions are welcome! Please ensure all code includes:
+- Comprehensive JSDoc documentation
+- Full test coverage following TDD principles
+- TypeScript strict mode compliance
 
-**Enjoy!**
+## License
+
+See [LICENSE](LICENSE) file for details.
+
+**Enjoy your AI-powered personal knowledge assistant!**

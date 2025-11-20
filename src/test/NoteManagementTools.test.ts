@@ -499,6 +499,35 @@ suite('CreateNoteTool Tests', () => {
     assert.strictEqual(fileContent, 'Just content.');
   });
 
+  test('should apply template content when templateName provided', async () => {
+    const templatesDir = path.join(testWorkspaceRoot, 'Templates');
+    await fs.mkdir(templatesDir, { recursive: true });
+    await fs.writeFile(
+      path.join(templatesDir, 'note-default.md'),
+      ['# {{title}}', '', 'Created: {{created}}', '', '{{content}}'].join('\n'),
+      'utf-8'
+    );
+
+    const tool = new CreateNoteTool();
+    await tool.invoke(
+      {
+        input: {
+          notePath: 'templated-note.md',
+          content: 'Body text.',
+          templateName: 'note-default',
+          templateData: { title: 'Templated', created: '2025-11-19' }
+        },
+        options: {}
+      } as any,
+      {} as vscode.CancellationToken
+    );
+
+    const fileContent = await readTestFile(path.join(testWorkspaceRoot, 'templated-note.md'));
+    assert.ok(fileContent.includes('# Templated'));
+    assert.ok(fileContent.includes('Created: 2025-11-19'));
+    assert.ok(fileContent.includes('Body text.'));
+  });
+
   test('should create nested directories automatically', async () => {
     const tool = new CreateNoteTool();
     await tool.invoke(

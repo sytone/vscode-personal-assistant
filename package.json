@@ -32,6 +32,22 @@
         "isSticky": true,
         "commands": [
           {
+            "name": "add",
+            "description": "Add an entry to today's journal"
+          },
+          {
+            "name": "meeting",
+            "description": "Start tracking a meeting with the given title"
+          },
+          {
+            "name": "endMeeting",
+            "description": "End the current meeting and add all notes to the journal"
+          },
+          {
+            "name": "summarize",
+            "description": "Summarize the current meeting or create a summary journal entry"
+          },
+          {
             "name": "randomTeach",
             "description": "Pick at random a computer science concept then explain it in purfect way of a cat"
           },
@@ -95,6 +111,16 @@
           "type": "number",
           "minimum": 50,
           "maximum": 2000
+        },
+        "personal-assistant.templatesFolderName": {
+          "default": "Templates",
+          "description": "Folder (relative to vault root) that stores markdown templates used by journal and note tools.",
+          "type": "string"
+        },
+        "personal-assistant.journalTemplateName": {
+          "default": "journal-weekly",
+          "description": "Template file name (without extension) used to seed new weekly journal files.",
+          "type": "string"
         }
       }
     },
@@ -211,6 +237,17 @@
             "completed": {
               "type": "boolean",
               "description": "Mark task as completed. Defaults to false (unchecked)."
+            },
+            "parentTask": {
+              "type": "string",
+              "description": "Description of parent task to add this task as a child. If specified, this task will be added as a child with proper indentation."
+            },
+            "childTasks": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Array of child task descriptions to add under this parent task. Each will be added with proper indentation."
             }
           },
           "required": [
@@ -606,6 +643,15 @@
     "old:vscode:prepublish": "npm run compile",
     "old:compile": "tsc -p ./",
     "old:watch": "tsc -watch -p ./",
+    "build": "npm run check-types && node esbuild.js",
+    "build:watch": "node esbuild.js --watch",
+    "build:prod": "npm run check-types && node esbuild.js --production",
+    "build:test": "tsc --project tsconfig.test.json",
+    "build:test:watch": "tsc --project tsconfig.test.json --watch",
+    "build:all": "run-p build build:test",
+    "build:all:watch": "run-p check-types:watch build:watch",
+
+    "check-types:watch": "tsc --noEmit --watch",    
     "compile-tests": "tsc -p . --outDir out",
     "pretest": "npm run compile-tests",
     "lint": "eslint src",
@@ -621,6 +667,8 @@
     "release": "semantic-release"
   },
   "devDependencies": {
+    "@eslint/js": "^9.13.0",
+    "@stylistic/eslint-plugin": "^2.9.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@types/mdast": "^4.0.4",
@@ -637,7 +685,8 @@
     "semantic-release": "^24.2.9",
     "semantic-release-stop-before-publish": "^2.0.0",
     "semantic-release-vsce": "^6.0.13",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.39.0"
   },
   "dependencies": {
     "@vscode/chat-extension-utils": "^0.0.0-alpha.1",

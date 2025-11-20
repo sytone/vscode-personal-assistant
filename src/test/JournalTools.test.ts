@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
-import { AddJournalEntryTool, AddJournalTaskTool, ReadJournalEntriesTool } from '../tools/JournalTools';
-import { setVaultRootForTesting } from '../extension';
+import { AddJournalEntryTool, AddJournalTaskTool, ReadJournalEntriesTool, CompleteJournalTaskTool, ReadJournalTasksTool } from '../tools/JournalTools';
+import { setJournalTemplateNameForTesting, setVaultRootForTesting } from '../extension';
 
 suite('Journal Tools Test Suite', () => {
   let testWorkspaceRoot: string;
@@ -84,6 +84,74 @@ suite('Journal Tools Test Suite', () => {
 
       // Check for entry with timestamp
       assert.ok(lines.some(l => l.match(/^- \d{2}:\d{2} - First test entry$/)), 'Should have timestamped entry');
+    });
+
+    test('should seed new weekly file from template when available', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const templateDir = path.join(testWorkspaceRoot, 'Templates');
+      await fs.mkdir(templateDir, { recursive: true });
+      const templatePath = path.join(templateDir, 'journal-weekly.md');
+      const templateContent = [
+        '# Custom Week {{weekNumber}} in {{year}}',
+        '',
+        '{{#each days}}',
+        '## {{dayNumber}} {{dayName}}',
+        '',
+        '{{/each}}'
+      ].join('\n');
+      await fs.writeFile(templatePath, templateContent, 'utf-8');
+
+      const tool = new AddJournalEntryTool();
+
+      await tool.invoke({
+        input: {
+          entryContent: 'Templated entry',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const expectedPath = path.join(testJournalPath, '2025', '2025-W44.md');
+      const content = await readJournalFile(expectedPath);
+      assert.ok(content.startsWith('# Custom Week 44 in 2025'), 'Template header should be applied');
+      assert.ok(content.includes('## 30 Thursday'), 'Template should include day headings');
+    });
+
+    test('should respect configured journal template name', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const templateDir = path.join(testWorkspaceRoot, 'Templates');
+      await fs.mkdir(templateDir, { recursive: true });
+      const templatePath = path.join(templateDir, 'weekly-custom.md');
+      const templateContent = [
+        '# Configurable Week {{weekNumber}} in {{year}}',
+        '',
+        '{{#each days}}',
+        '## {{dayNumber}} {{dayName}}',
+        '',
+        '{{/each}}'
+      ].join('\n');
+      await fs.writeFile(templatePath, templateContent, 'utf-8');
+
+      setJournalTemplateNameForTesting('weekly-custom');
+
+      try {
+        const tool = new AddJournalEntryTool();
+
+        await tool.invoke({
+          input: {
+            entryContent: 'Configurable template entry',
+            date: '2025-10-30'
+          },
+          options: {}
+        } as any, {} as vscode.CancellationToken);
+
+        const expectedPath = path.join(testJournalPath, '2025', '2025-W44.md');
+        const content = await readJournalFile(expectedPath);
+        assert.ok(content.startsWith('# Configurable Week 44 in 2025'), 'Configured template header should be applied');
+        assert.ok(content.includes('## 30 Thursday'), 'Configured template should include day headings');
+      } finally {
+        setJournalTemplateNameForTesting(null);
+      }
     });
 
     test('should add entry to existing day section', async function () {
@@ -684,12 +752,550 @@ suite('Journal Tools Test Suite', () => {
     });
   });
 
+  suite('CompleteJournalTaskTool', () => {
+    test('should mark existing task as completed', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Review pull request #123',
+        '- [ ] Complete project documentation',
+        '- [x] Already completed task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new CompleteJournalTaskTool();
+      const result = await tool.invoke({
+        input: {
+          taskDescription: 'Complete project documentation',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+      
+      assert.ok(content.includes('- [x] Complete project documentation'), 'Task should be marked as completed');
+      assert.ok(content.includes('- [ ] Review pull request #123'), 'Other incomplete tasks should remain unchanged');
+      assert.ok(content.includes('- [x] Already completed task'), 'Already completed tasks should remain unchanged');
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      assert.ok(parts[0].value.includes('marked as completed'), 'Should confirm completion');
+    });
+
+    test('should handle partial task description match', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Review pull request #123 for backend changes',
+        '- [ ] Complete project documentation',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new CompleteJournalTaskTool();
+      await tool.invoke({
+        input: {
+          taskDescription: 'pull request #123',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+      assert.ok(content.includes('- [x] Review pull request #123 for backend changes'), 'Should match partial description');
+    });
+
+    test('should handle task not found', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Review pull request #123',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new CompleteJournalTaskTool();
+      const result = await tool.invoke({
+        input: {
+          taskDescription: 'Non-existent task',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      assert.ok(parts[0].value.includes('not found'), 'Should indicate task not found');
+    });
+
+    test('should handle no tasks section', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## 30 Thursday',
+        '',
+        '- 10:00 - Some entry',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new CompleteJournalTaskTool();
+      const result = await tool.invoke({
+        input: {
+          taskDescription: 'Any task',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      assert.ok(parts[0].value.includes('No tasks section found'), 'Should indicate no tasks section');
+    });
+
+    test('should maintain proper spacing after completion', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Task 1',
+        '',
+        '',
+        '- [ ] Task to complete',
+        '',
+        '- [ ] Task 3',
+        '',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new CompleteJournalTaskTool();
+      await tool.invoke({
+        input: {
+          taskDescription: 'Task to complete',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+      const lines = content.split(/\r?\n/);
+
+      const tasksIndex = lines.findIndex(l => l.trim() === '## Tasks This Week');
+      const thursdayIndex = lines.findIndex(l => l.trim() === '## 30 Thursday');
+
+      // Verify proper spacing (no consecutive blank lines between tasks)
+      for (let i = tasksIndex + 2; i < thursdayIndex - 1; i++) {
+        if (!lines[i].trim() && !lines[i + 1].trim()) {
+          assert.fail('Should not have consecutive blank lines between tasks');
+        }
+      }
+    });
+  });
+
+  suite('ReadJournalTasksTool', () => {
+    test('should read tasks from existing tasks section', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Review pull request #123',
+        '- [x] Complete project documentation',
+        '- [ ] Write unit tests',
+        '  - [ ] Test user authentication',
+        '  - [x] Test data validation',
+        '- [x] Deploy to staging',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new ReadJournalTasksTool();
+      const result = await tool.invoke({
+        input: {
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      const output = parts[0].value;
+
+      assert.ok(output.includes('Review pull request #123'), 'Should include incomplete parent task');
+      assert.ok(output.includes('Complete project documentation'), 'Should include completed parent task');
+      assert.ok(output.includes('Write unit tests'), 'Should include parent task with children');
+      assert.ok(output.includes('Test user authentication'), 'Should include incomplete child task');
+      assert.ok(output.includes('Test data validation'), 'Should include completed child task');
+      assert.ok(output.includes('Deploy to staging'), 'Should include completed parent task');
+    });
+
+    test('should handle no tasks section', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## 30 Thursday',
+        '',
+        '- 10:00 - Some entry',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new ReadJournalTasksTool();
+      const result = await tool.invoke({
+        input: {
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      assert.ok(parts[0].value.includes('No tasks found'), 'Should indicate no tasks found');
+    });
+
+    test('should filter by completion status', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Incomplete task 1',
+        '- [x] Completed task 1',
+        '- [ ] Incomplete task 2',
+        '- [x] Completed task 2',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      // Test incomplete only
+      const tool = new ReadJournalTasksTool();
+      const result1 = await tool.invoke({
+        input: {
+          date: '2025-10-30',
+          showCompleted: false
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts1 = result1.content as vscode.LanguageModelTextPart[];
+      const output1 = parts1[0].value;
+
+      assert.ok(output1.includes('Incomplete task 1'), 'Should include incomplete tasks');
+      assert.ok(output1.includes('Incomplete task 2'), 'Should include incomplete tasks');
+      assert.ok(!output1.includes('Completed task 1'), 'Should not include completed tasks');
+      assert.ok(!output1.includes('Completed task 2'), 'Should not include completed tasks');
+
+      // Test completed only
+      const result2 = await tool.invoke({
+        input: {
+          date: '2025-10-30',
+          showIncomplete: false
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts2 = result2.content as vscode.LanguageModelTextPart[];
+      const output2 = parts2[0].value;
+
+      assert.ok(!output2.includes('Incomplete task 1'), 'Should not include incomplete tasks');
+      assert.ok(!output2.includes('Incomplete task 2'), 'Should not include incomplete tasks');
+      assert.ok(output2.includes('Completed task 1'), 'Should include completed tasks');
+      assert.ok(output2.includes('Completed task 2'), 'Should include completed tasks');
+    });
+
+    test('should show parent-child relationships', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Parent Task 1',
+        '  - [x] Child Task 1.1',
+        '  - [ ] Child Task 1.2',
+        '- [x] Parent Task 2',
+        '  - [x] Child Task 2.1',
+        '- [ ] Standalone Task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new ReadJournalTasksTool();
+      const result = await tool.invoke({
+        input: {
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      const output = parts[0].value;
+
+      // Should preserve indentation to show hierarchy
+      assert.ok(output.includes('Parent Task 1'), 'Should include parent task');
+      assert.ok(output.includes('  - [x] Child Task 1.1'), 'Should include child with proper indentation');
+      assert.ok(output.includes('  - [ ] Child Task 1.2'), 'Should include child with proper indentation');
+      assert.ok(output.includes('Parent Task 2'), 'Should include completed parent task');
+      assert.ok(output.includes('  - [x] Child Task 2.1'), 'Should include completed child task');
+      assert.ok(output.includes('Standalone Task'), 'Should include standalone task');
+    });
+
+    test('should return summary statistics', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Parent Task 1',
+        '  - [x] Child Task 1.1',
+        '  - [ ] Child Task 1.2',
+        '- [x] Parent Task 2',
+        '- [ ] Standalone Task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new ReadJournalTasksTool();
+      const result = await tool.invoke({
+        input: {
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      const output = parts[0].value;
+
+      // Should include summary at top or bottom
+      assert.ok(output.includes('5 total'), 'Should show total task count');
+      assert.ok(output.includes('2 completed'), 'Should show completed count');
+      assert.ok(output.includes('3 incomplete'), 'Should show incomplete count');
+    });
+  });
+
+  suite('AddJournalTaskTool - Parent/Child Support', () => {
+    test('should add parent task with child tasks', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Existing task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new AddJournalTaskTool();
+      await tool.invoke({
+        input: {
+          taskDescription: 'Complete feature development',
+          childTasks: ['Write unit tests', 'Update documentation', 'Code review'],
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+
+      assert.ok(content.includes('- [ ] Complete feature development'), 'Should add parent task');
+      assert.ok(content.includes('  - [ ] Write unit tests'), 'Should add first child task with proper indentation');
+      assert.ok(content.includes('  - [ ] Update documentation'), 'Should add second child task');
+      assert.ok(content.includes('  - [ ] Code review'), 'Should add third child task');
+      assert.ok(content.includes('- [ ] Existing task'), 'Should preserve existing tasks');
+    });
+
+    test('should add child task to existing parent', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Feature development',
+        '  - [ ] Write tests',
+        '- [ ] Other task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new AddJournalTaskTool();
+      await tool.invoke({
+        input: {
+          taskDescription: 'Update documentation',
+          parentTask: 'Feature development',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+
+      assert.ok(content.includes('- [ ] Feature development'), 'Should preserve parent task');
+      assert.ok(content.includes('  - [ ] Write tests'), 'Should preserve existing child');
+      assert.ok(content.includes('  - [ ] Update documentation'), 'Should add new child task');
+      assert.ok(content.includes('- [ ] Other task'), 'Should preserve other tasks');
+    });
+
+    test('should handle parent task not found when adding child', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Existing task',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new AddJournalTaskTool();
+      const result = await tool.invoke({
+        input: {
+          taskDescription: 'Child task',
+          parentTask: 'Non-existent parent',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts = result.content as vscode.LanguageModelTextPart[];
+      assert.ok(parts[0].value.includes('Parent task not found'), 'Should indicate parent not found');
+    });
+
+    test('should maintain proper spacing with parent/child hierarchy', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## Tasks This Week',
+        '',
+        '- [ ] Task 1',
+        '',
+        '',
+        '- [ ] Task 2',
+        '',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new AddJournalTaskTool();
+      await tool.invoke({
+        input: {
+          taskDescription: 'Parent with children',
+          childTasks: ['Child 1', 'Child 2'],
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const content = await readJournalFile(weeklyFilePath);
+      const lines = content.split(/\r?\n/);
+
+      const tasksIndex = lines.findIndex(l => l.trim() === '## Tasks This Week');
+      const thursdayIndex = lines.findIndex(l => l.trim() === '## 30 Thursday');
+
+      // Should have proper compact formatting
+      const tasksSection = lines.slice(tasksIndex, thursdayIndex);
+      const taskLines = tasksSection.filter(l => l.trim().startsWith('- [') || l.trim().startsWith('  - ['));
+
+      // All task lines should be consecutive (no blank lines between them)
+      for (let i = 0; i < taskLines.length - 1; i++) {
+        const currentIndex = lines.indexOf(taskLines[i]);
+        const nextIndex = lines.indexOf(taskLines[i + 1]);
+        assert.strictEqual(nextIndex - currentIndex, 1, 'Tasks should be consecutive without blank lines');
+      }
+    });
+  });
+
   suite('Integration Tests', () => {
-    test('should handle complete workflow: create, add entries, add tasks, read', async function () {
+    test('should handle complete workflow: create, add entries, add tasks with hierarchy, complete tasks, read', async function () {
       this.timeout(MARKDOWNLINT_TIMEOUT);
       const tool1 = new AddJournalEntryTool();
       const tool2 = new AddJournalTaskTool();
       const tool3 = new ReadJournalEntriesTool();
+      const tool4 = new CompleteJournalTaskTool();
+      const tool5 = new ReadJournalTasksTool();
 
       // Add first entry
       await tool1.invoke({
@@ -709,8 +1315,27 @@ suite('Journal Tools Test Suite', () => {
         options: {}
       } as any, {} as vscode.CancellationToken);
 
-      // Add task
+      // Add parent task with children
       await tool2.invoke({
+        input: {
+          taskDescription: 'Complete feature',
+          childTasks: ['Write tests', 'Update docs'],
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      // Add standalone task
+      await tool2.invoke({
+        input: {
+          taskDescription: 'Deploy to staging',
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      // Complete one of the child tasks
+      await tool4.invoke({
         input: {
           taskDescription: 'Write tests',
           date: '2025-10-30'
@@ -718,8 +1343,8 @@ suite('Journal Tools Test Suite', () => {
         options: {}
       } as any, {} as vscode.CancellationToken);
 
-      // Read back
-      const result = await tool3.invoke({
+      // Read back journal entries
+      const result1 = await tool3.invoke({
         input: {
           includeContent: true,
           maxEntries: 10
@@ -727,14 +1352,31 @@ suite('Journal Tools Test Suite', () => {
         options: {}
       } as any, {} as vscode.CancellationToken);
 
-      const parts = result.content as vscode.LanguageModelTextPart[];
-      const output = parts[0].value;
+      const parts1 = result1.content as vscode.LanguageModelTextPart[];
+      const output1 = parts1[0].value;
 
-      assert.ok(output.includes('Morning standup'), 'Should include first entry');
-      assert.ok(output.includes('Code review'), 'Should include second entry');
-      assert.ok(output.includes('Write tests'), 'Should include task');
-      assert.ok(output.includes('## Tasks This Week'), 'Should have tasks section');
-      assert.ok(output.includes('## 30 Thursday'), 'Should have day section');
+      assert.ok(output1.includes('Morning standup'), 'Should include first entry');
+      assert.ok(output1.includes('Code review'), 'Should include second entry');
+      assert.ok(output1.includes('Complete feature'), 'Should include parent task');
+      assert.ok(output1.includes('Deploy to staging'), 'Should include standalone task');
+      assert.ok(output1.includes('## Tasks This Week'), 'Should have tasks section');
+      assert.ok(output1.includes('## 30 Thursday'), 'Should have day section');
+
+      // Read back tasks specifically
+      const result2 = await tool5.invoke({
+        input: {
+          date: '2025-10-30'
+        },
+        options: {}
+      } as any, {} as vscode.CancellationToken);
+
+      const parts2 = result2.content as vscode.LanguageModelTextPart[];
+      const output2 = parts2[0].value;
+
+      assert.ok(output2.includes('Complete feature'), 'Should show parent task');
+      assert.ok(output2.includes('[x] Write tests'), 'Should show completed child task');
+      assert.ok(output2.includes('[ ] Update docs'), 'Should show incomplete child task');
+      assert.ok(output2.includes('Deploy to staging'), 'Should show standalone task');
     });
   });
 });

@@ -10,14 +10,35 @@ import { registerSimpleParticipant } from "./chatParticipants/chatParticipants";
 
 // Global vault root path
 let vaultRootPath: string | null = null;
+const DEFAULT_TEMPLATES_FOLDER = "Templates";
+const DEFAULT_JOURNAL_TEMPLATE_NAME = "journal-weekly";
+let templatesFolderName = DEFAULT_TEMPLATES_FOLDER;
+let journalTemplateName = DEFAULT_JOURNAL_TEMPLATE_NAME;
 
 export function getVaultRoot(): string | null {
   return vaultRootPath;
 }
 
+export function getTemplatesFolderName(): string {
+  return templatesFolderName;
+}
+
+export function getJournalTemplateName(): string {
+  return journalTemplateName;
+}
+
 // For testing purposes only
 export function setVaultRootForTesting(path: string | null): void {
   vaultRootPath = path;
+}
+
+// For testing purposes only
+export function setTemplatesFolderNameForTesting(folderName: string | null): void {
+  templatesFolderName = folderName && folderName.trim() ? folderName.trim() : DEFAULT_TEMPLATES_FOLDER;
+}
+
+export function setJournalTemplateNameForTesting(templateName: string | null): void {
+  journalTemplateName = templateName && templateName.trim() ? templateName.trim() : DEFAULT_JOURNAL_TEMPLATE_NAME;
 }
 
 function determineVaultRoot(): string | null {
@@ -54,6 +75,26 @@ function determineVaultRoot(): string | null {
   return workspaceRoot;
 }
 
+function determineTemplatesFolderName(): string {
+  const configured = vscode.workspace
+    .getConfiguration("personal-assistant")
+    .get<string>("templatesFolderName");
+  if (configured && configured.trim()) {
+    return configured.trim();
+  }
+  return DEFAULT_TEMPLATES_FOLDER;
+}
+
+function determineJournalTemplateName(): string {
+  const configured = vscode.workspace
+    .getConfiguration("personal-assistant")
+    .get<string>("journalTemplateName");
+  if (configured && configured.trim()) {
+    return configured.trim();
+  }
+  return DEFAULT_JOURNAL_TEMPLATE_NAME;
+}
+
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
 export function activate(context: vscode.ExtensionContext) {
@@ -65,6 +106,8 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Determine vault root path
   vaultRootPath = determineVaultRoot();
+  templatesFolderName = determineTemplatesFolderName();
+  journalTemplateName = determineJournalTemplateName();
 
   if (vaultRootPath) {
     console.log(`Vault Root Path: ${vaultRootPath}`);
@@ -78,6 +121,14 @@ export function activate(context: vscode.ExtensionContext) {
       if (e.affectsConfiguration("personal-assistant.vaultPath")) {
         vaultRootPath = determineVaultRoot();
         console.log(`Vault root path updated: ${vaultRootPath}`);
+      }
+      if (e.affectsConfiguration("personal-assistant.templatesFolderName")) {
+        templatesFolderName = determineTemplatesFolderName();
+        console.log(`Templates folder updated: ${templatesFolderName}`);
+      }
+      if (e.affectsConfiguration("personal-assistant.journalTemplateName")) {
+        journalTemplateName = determineJournalTemplateName();
+        console.log(`Journal template updated: ${journalTemplateName}`);
       }
     })
   );

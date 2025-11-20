@@ -2,8 +2,9 @@ import * as vscode from "vscode";
 import * as path from "path";
 import * as fs from "fs/promises";
 import * as os from "os";
-import { getVaultRoot } from "../extension";
+import { getJournalTemplateName, getVaultRoot } from "../extension";
 import { dateService } from "../services/DateService";
+import { templateService } from "../services/TemplateService";
 
 // Constants
 const TIME_FORMAT = "HH:mm";
@@ -16,6 +17,126 @@ const DAY_SECTION_HEADER_REGEX = /^##\s+\d{1,2}\s+\w+\s*$/;
 const DAY_SECTION_HEADER_WITH_CAPTURE_REGEX = /^##\s+(\d{1,2})\s+\w+\s*$/;
 const LEVEL2_HEADING_REGEX = /^##\s+/;
 const TITLE_HEADING_REGEX = /^#\s+/;
+
+// Task-related types and helpers
+
+interface ParsedTask {
+  line: string;
+  description: string;
+  completed: boolean;
+  indent: number;
+  lineIndex: number;
+}
+
+/**
+ * Parses task lines from content and extracts task information.
+ * @param content The markdown content containing tasks
+ * @returns Array of parsed tasks with their metadata
+ */
+function parseTasksFromContent(content: string): ParsedTask[] {
+  const lines = content.split(/\r?\n/);
+  const tasks: ParsedTask[] = [];
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const taskMatch = line.match(/^(\s*)- \[([ x])\] (.+)$/);
+    if (taskMatch) {
+      const [, indentStr, checkbox, description] = taskMatch;
+      tasks.push({
+        line: line,
+        description: description.trim(),
+        completed: checkbox === 'x',
+        indent: indentStr.length,
+        lineIndex: i
+      });
+    }
+  }
+  
+  return tasks;
+}
+
+/**
+ * Finds a task by partial description match.
+ * @param tasks Array of parsed tasks
+ * @param searchDescription Description to search for (supports partial matching)
+ * @returns The matching task or undefined
+ */
+function findTaskByDescription(tasks: ParsedTask[], searchDescription: string): ParsedTask | undefined {
+  const searchLower = searchDescription.toLowerCase().trim();
+  
+  // First try exact match
+  const exactMatch = tasks.find(task => task.description.toLowerCase() === searchLower);
+  if (exactMatch) {
+    return exactMatch;
+  }
+  
+  // Then try partial match
+  return tasks.find(task => task.description.toLowerCase().includes(searchLower));
+}
+
+/**
+ * Finds the tasks section in content and returns its boundaries.
+ * @param content The markdown content
+ * @param tasksHeading The heading to look for (e.g., "## Tasks This Week")
+ * @returns Object with start and end indices, or null if not found
+ */
+function findTasksSection(content: string, tasksHeading: string): { startIndex: number; endIndex: number } | null {
+  const lines = content.split(/\r?\n/);
+  const tasksIndex = lines.findIndex((l) => l.trim() === tasksHeading);
+  
+  if (tasksIndex < 0) {
+    return null;
+  }
+  
+  // Find the end of the tasks section (next level 2 heading or end of file)
+  let endIndex = lines.length;
+  for (let i = tasksIndex + 1; i < lines.length; i++) {
+    if (LEVEL2_HEADING_REGEX.test(lines[i])) {
+      endIndex = i;
+      break;
+    }
+  }
+  
+  return { startIndex: tasksIndex, endIndex };
+}
+
+/**
+ * Formats tasks with proper hierarchy and completion status for display.
+ * @param tasks Array of parsed tasks
+ * @param showCompleted Whether to include completed tasks
+ * @param showIncomplete Whether to include incomplete tasks
+ * @returns Formatted task list as string
+ */
+function formatTasksForDisplay(tasks: ParsedTask[], showCompleted = true, showIncomplete = true): string {
+  const filteredTasks = tasks.filter(task => {
+    if (task.completed && !showCompleted) {
+      return false;
+    }
+    if (!task.completed && !showIncomplete) {
+      return false;
+    }
+    return true;
+  });
+  
+  if (filteredTasks.length === 0) {
+    return '';
+  }
+  
+  const taskLines = filteredTasks.map(task => {
+    const indent = ' '.repeat(task.indent);
+    const checkbox = task.completed ? '[x]' : '[ ]';
+    return `${indent}- ${checkbox} ${task.description}`;
+  });
+  
+  // Add summary statistics
+  const total = filteredTasks.length;
+  const completed = filteredTasks.filter(t => t.completed).length;
+  const incomplete = total - completed;
+  
+  const summary = `Summary: ${total} total, ${completed} completed, ${incomplete} incomplete`;
+  
+  return `${summary}\n\n${taskLines.join('\n')}`;
+}
 
 // Helper functions
 
@@ -59,7 +180,42 @@ async function loadOrCreateWeeklyContent(weeklyFilePath: string, isoYear: number
   try {
     return await fs.readFile(weeklyFilePath, "utf-8");
   } catch {
+    const templated = await renderWeeklyTemplate(isoYear, isoWeek);
+    if (templated) {
+      return templated;
+    }
     return createWeeklyStub(isoYear, isoWeek);
+  }
+}
+
+/**
+ * Attempts to seed a new weekly journal file from a vault template.
+ *
+ * @param isoYear - ISO year for the week
+ * @param isoWeek - ISO week number
+ * @returns Rendered template content or null if the template cannot be resolved
+ */
+async function renderWeeklyTemplate(isoYear: number, isoWeek: number): Promise<string | null> {
+  try {
+    const monday = dateService.getMonday(isoYear, isoWeek);
+    const days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return {
+        dayNumber: date.getDate(),
+        dayName: date.toLocaleDateString("en-US", { weekday: "long" }),
+        isoDate: dateService.formatDate(date)
+      };
+    });
+
+    const templateName = getJournalTemplateName();
+    return await templateService.renderTemplate(templateName, {
+      year: isoYear,
+      weekNumber: isoWeek,
+      days
+    });
+  } catch {
+    return null;
   }
 }
 
@@ -424,6 +580,21 @@ interface IAddJournalTaskParameters {
   journalPath?: string;
   date?: string;
   completed?: boolean;
+  parentTask?: string;
+  childTasks?: string[];
+}
+
+interface ICompleteJournalTaskParameters {
+  taskDescription: string;
+  journalPath?: string;
+  date?: string;
+}
+
+interface IReadJournalTasksParameters {
+  journalPath?: string;
+  date?: string;
+  showCompleted?: boolean;
+  showIncomplete?: boolean;
 }
 
 export class AddJournalTaskTool implements vscode.LanguageModelTool<IAddJournalTaskParameters> {
@@ -460,23 +631,89 @@ export class AddJournalTaskTool implements vscode.LanguageModelTool<IAddJournalT
       const tasksIndex = lines.findIndex((l) => l.trim() === tasksHeading);
       
       const checkbox = params.completed ? "[x]" : "[ ]";
-      const taskLine = `- ${checkbox} ${params.taskDescription.trim()}`;
       
-      if (tasksIndex >= 0) {
-        // Tasks section exists: find where to insert the new task
-        let insertIndex = tasksIndex + 1;
+      // Handle parent task scenario
+      if (params.parentTask) {
+        if (tasksIndex < 0) {
+          return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart("No tasks section found to add child task."),
+          ]);
+        }
         
-        // Skip the blank line after the heading (if present)
-        if (insertIndex < lines.length && !lines[insertIndex].trim()) {
+        // Find the parent task
+        const tasksSection = findTasksSection(content, tasksHeading);
+        if (!tasksSection) {
+          return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart("No tasks section found to add child task."),
+          ]);
+        }
+        
+        const tasksContent = lines.slice(tasksSection.startIndex, tasksSection.endIndex).join('\n');
+        const tasks = parseTasksFromContent(tasksContent);
+        const parentTask = findTaskByDescription(tasks, params.parentTask);
+        
+        if (!parentTask) {
+          return new vscode.LanguageModelToolResult([
+            new vscode.LanguageModelTextPart(`Parent task not found: "${params.parentTask}".`),
+          ]);
+        }
+        
+        // Add child task after the parent (with proper indentation)
+        const parentLineIndex = tasksSection.startIndex + parentTask.lineIndex;
+        const childTaskLine = `  - ${checkbox} ${params.taskDescription.trim()}`;
+        
+        // Find where to insert child (after parent and any existing children)
+        let insertIndex = parentLineIndex + 1;
+        while (insertIndex < tasksSection.endIndex && 
+               lines[insertIndex].match(/^\s{2,}- \[[x ]\]/)) {
           insertIndex++;
         }
         
-        // Insert the new task right after the heading (and blank line)
-        // This makes it the first task in the list
-        lines.splice(insertIndex, 0, taskLine);
+        lines.splice(insertIndex, 0, childTaskLine);
       } else {
-        // Tasks section doesn't exist: create it after the title
-        insertNewSection(lines, tasksHeading, taskLine);
+        // Handle standalone task or parent with children
+        const taskLine = `- ${checkbox} ${params.taskDescription.trim()}`;
+        const childTasks = params.childTasks || [];
+        
+        const taskLines = [taskLine];
+        childTasks.forEach(childTask => {
+          taskLines.push(`  - [ ] ${childTask.trim()}`);
+        });
+        
+        if (tasksIndex >= 0) {
+          // Tasks section exists: find where to insert the new task
+          let insertIndex = tasksIndex + 1;
+          
+          // Skip the blank line after the heading (if present)
+          if (insertIndex < lines.length && !lines[insertIndex].trim()) {
+            insertIndex++;
+          }
+          
+          // Insert all task lines (parent + children)
+          lines.splice(insertIndex, 0, ...taskLines);
+        } else {
+          // Tasks section doesn't exist: create it after the title
+          insertNewSection(lines, tasksHeading, taskLines[0]);
+          
+          // Add child tasks if any
+          if (childTasks.length > 0) {
+            const newTasksIndex = lines.findIndex((l) => l.trim() === tasksHeading);
+            let insertIndex = newTasksIndex + 1;
+            
+            // Skip blank line after heading
+            if (insertIndex < lines.length && !lines[insertIndex].trim()) {
+              insertIndex++;
+            }
+            
+            // Skip the parent task we just added
+            if (insertIndex < lines.length && lines[insertIndex].includes(params.taskDescription)) {
+              insertIndex++;
+            }
+            
+            // Add child tasks
+            lines.splice(insertIndex, 0, ...taskLines.slice(1));
+          }
+        }
       }
       
       const updatedContent = lines.join(EOL);
@@ -484,8 +721,16 @@ export class AddJournalTaskTool implements vscode.LanguageModelTool<IAddJournalT
       await writeJournalContent(weeklyFilePath, formattedContent);
       
       const relativePath = path.relative(workspaceRoot, weeklyFilePath);
+      
+      let message = `Added task to ${relativePath} under '${tasksHeading}'.`;
+      if (params.parentTask) {
+        message = `Added child task to "${params.parentTask}" in ${relativePath}.`;
+      } else if (params.childTasks && params.childTasks.length > 0) {
+        message = `Added parent task with ${params.childTasks.length} child tasks to ${relativePath}.`;
+      }
+      
       return new vscode.LanguageModelToolResult([
-        new vscode.LanguageModelTextPart(`Added task to ${relativePath} under '${tasksHeading}'.`),
+        new vscode.LanguageModelTextPart(message),
       ]);
     } catch (err) {
       return new vscode.LanguageModelToolResult([
@@ -500,6 +745,149 @@ export class AddJournalTaskTool implements vscode.LanguageModelTool<IAddJournalT
   ) {
     return {
       invocationMessage: `Adding journal task`,
+    };
+  }
+}
+
+export class CompleteJournalTaskTool implements vscode.LanguageModelTool<ICompleteJournalTaskParameters> {
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<ICompleteJournalTaskParameters>,
+    token: vscode.CancellationToken
+  ): Promise<vscode.LanguageModelToolResult> {
+    const params = options.input;
+    
+    if (!params.taskDescription || !params.taskDescription.trim()) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart("No task description provided."),
+      ]);
+    }
+
+    const journalPath = params.journalPath || getJournalPath();
+    const tasksHeading = getTasksHeading();
+    const workspaceRoot = getVaultRoot();
+    
+    if (!workspaceRoot) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart("No vault root configured. Please open a workspace or configure personal-assistant.vaultPath."),
+      ]);
+    }
+
+    try {
+      const targetDate = params.date ? dateService.parseLocalDate(params.date) || new Date() : new Date();
+      const { year: isoYear, week: isoWeek } = dateService.getISOWeek(targetDate);
+      
+      const weeklyFilePath = await resolveWeeklyFilePath(journalPath, isoYear, isoWeek, workspaceRoot);
+      const content = await loadOrCreateWeeklyContent(weeklyFilePath, isoYear, isoWeek);
+      
+      const tasksSection = findTasksSection(content, tasksHeading);
+      if (!tasksSection) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart("No tasks section found in the weekly journal."),
+        ]);
+      }
+
+      const lines = content.split(/\r?\n/);
+      const tasksContent = lines.slice(tasksSection.startIndex, tasksSection.endIndex).join('\n');
+      const tasks = parseTasksFromContent(tasksContent);
+      
+      const taskToComplete = findTaskByDescription(tasks, params.taskDescription);
+      if (!taskToComplete) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart(`Task "${params.taskDescription}" not found.`),
+        ]);
+      }
+
+      // Mark the task as completed
+      const actualLineIndex = tasksSection.startIndex + taskToComplete.lineIndex;
+      const updatedLine = lines[actualLineIndex].replace(/- \[ \]/, '- [x]');
+      lines[actualLineIndex] = updatedLine;
+      
+      const updatedContent = lines.join(EOL);
+      const formattedContent = await formatMarkdownContent(updatedContent);
+      await writeJournalContent(weeklyFilePath, formattedContent);
+      
+      const relativePath = path.relative(workspaceRoot, weeklyFilePath);
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`Task "${taskToComplete.description}" marked as completed in ${relativePath}.`),
+      ]);
+    } catch (err) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`Error completing journal task: ${err}`),
+      ]);
+    }
+  }
+
+  async prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<ICompleteJournalTaskParameters>,
+    _token: vscode.CancellationToken
+  ) {
+    return {
+      invocationMessage: `Marking journal task as completed`,
+    };
+  }
+}
+
+export class ReadJournalTasksTool implements vscode.LanguageModelTool<IReadJournalTasksParameters> {
+  async invoke(
+    options: vscode.LanguageModelToolInvocationOptions<IReadJournalTasksParameters>,
+    token: vscode.CancellationToken
+  ): Promise<vscode.LanguageModelToolResult> {
+    const params = options.input;
+    const journalPath = params.journalPath || getJournalPath();
+    const tasksHeading = getTasksHeading();
+    const workspaceRoot = getVaultRoot();
+    
+    if (!workspaceRoot) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart("No vault root configured. Please open a workspace or configure personal-assistant.vaultPath."),
+      ]);
+    }
+
+    try {
+      const targetDate = params.date ? dateService.parseLocalDate(params.date) || new Date() : new Date();
+      const { year: isoYear, week: isoWeek } = dateService.getISOWeek(targetDate);
+      
+      const weeklyFilePath = await resolveWeeklyFilePath(journalPath, isoYear, isoWeek, workspaceRoot);
+      const content = await loadOrCreateWeeklyContent(weeklyFilePath, isoYear, isoWeek);
+      
+      const tasksSection = findTasksSection(content, tasksHeading);
+      if (!tasksSection) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart("No tasks found for this week."),
+        ]);
+      }
+
+      const tasksContent = content.split(/\r?\n/).slice(tasksSection.startIndex, tasksSection.endIndex).join('\n');
+      const tasks = parseTasksFromContent(tasksContent);
+      
+      if (tasks.length === 0) {
+        return new vscode.LanguageModelToolResult([
+          new vscode.LanguageModelTextPart("No tasks found for this week."),
+        ]);
+      }
+
+      const showCompleted = params.showCompleted !== false;
+      const showIncomplete = params.showIncomplete !== false;
+      
+      const formattedTasks = formatTasksForDisplay(tasks, showCompleted, showIncomplete);
+      
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(formattedTasks),
+      ]);
+    } catch (err) {
+      return new vscode.LanguageModelToolResult([
+        new vscode.LanguageModelTextPart(`Error reading journal tasks: ${err}`),
+      ]);
+    }
+  }
+
+  async prepareInvocation(
+    options: vscode.LanguageModelToolInvocationPrepareOptions<IReadJournalTasksParameters>,
+    _token: vscode.CancellationToken
+  ) {
+    const journalPath = options.input.journalPath || getJournalPath();
+    return {
+      invocationMessage: `Reading tasks from "${journalPath}"`,
     };
   }
 }

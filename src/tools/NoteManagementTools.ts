@@ -2,12 +2,13 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import {
-	parseMarkdown,
-	stringifyMarkdown,
-	updateFrontmatter as updateFrontmatterUtil,
-	removeFrontmatterKeys,
+  parseMarkdown,
+  stringifyMarkdown,
+  updateFrontmatter as updateFrontmatterUtil,
+  removeFrontmatterKeys,
 } from './MarkdownUtils';
 import { getVaultRoot } from '../extension';
+import { templateService } from '../services/TemplateService';
 
 /**
  * Determines if a folder should be excluded from file operations.
@@ -201,6 +202,10 @@ interface ICreateNoteParameters {
   content: string;
   /** Optional YAML frontmatter as key-value pairs. */
   frontmatter?: Record<string, any>;
+  /** Optional template identifier to seed the note content. */
+  templateName?: string;
+  /** Optional data passed to the template renderer. */
+  templateData?: Record<string, unknown>;
 }
 
 /** Parameters for updating note content. */
@@ -770,6 +775,7 @@ export class ReadNoteTool implements vscode.LanguageModelTool<IReadNoteParameter
  * - Automatically creates parent directories (recursive)
  * - Returns error if file already exists (use UpdateNoteTool to modify)
  * - Supports YAML frontmatter for metadata (tags, status, custom fields)
+ * - Seeds files from Templates/ when `templateName` is supplied
  *
  * Frontmatter is added as a YAML block at the top of the file:
  * ```yaml
@@ -848,8 +854,11 @@ export class CreateNoteTool implements vscode.LanguageModelTool<ICreateNoteParam
       await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
 
       // Create file content
+      const templatedContent = await this.renderFromTemplate(params);
       let fileContent: string;
-      if (params.frontmatter && Object.keys(params.frontmatter).length > 0) {
+      if (templatedContent) {
+        fileContent = templatedContent;
+      } else if (params.frontmatter && Object.keys(params.frontmatter).length > 0) {
         fileContent = await stringifyMarkdown(params.content, params.frontmatter);
       } else {
         fileContent = params.content;
@@ -876,6 +885,31 @@ export class CreateNoteTool implements vscode.LanguageModelTool<ICreateNoteParam
     return {
       invocationMessage: `Creating note "${options.input.notePath}"`,
     };
+  }
+
+  /**
+   * Renders content using a vault template when template metadata is provided.
+   *
+   * @param params - Invocation parameters supplied by the LM tool
+   * @returns Rendered template output or null when templating is not requested/available
+   */
+  private async renderFromTemplate(params: ICreateNoteParameters): Promise<string | null> {
+    if (!params.templateName) {
+      return null;
+    }
+
+    const templatePayload = {
+      ...(params.templateData ?? {}),
+      content: params.content,
+      notePath: params.notePath,
+      frontmatter: params.frontmatter ?? {}
+    };
+
+    try {
+      return await templateService.renderTemplate(params.templateName, templatePayload);
+    } catch {
+      return null;
+    }
   }
 }
 

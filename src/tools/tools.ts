@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { FindFilesTool } from "./FindFilesTool";
 import { RunInTerminalTool } from "./RunInTerminalTool";
-import { ReadJournalEntriesTool, AddJournalEntryTool, AddJournalTaskTool } from "./JournalTools";
+import { ReadJournalEntriesTool, AddJournalEntryTool, AddJournalTaskTool, CompleteJournalTaskTool, ReadJournalTasksTool } from "./JournalTools";
 import { CalculateRelativeDateTool, GetDateInfoTool, GetWeekDatesTool } from "./DateUtilityTools";
 import {
   ListFilesTool,
@@ -42,6 +42,18 @@ export function registerChatTools(context: vscode.ExtensionContext) {
     vscode.lm.registerTool(
       "journal-tools_addJournalTask",
       new AddJournalTaskTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "journal-tools_completeJournalTask",
+      new CompleteJournalTaskTool()
+    )
+  );
+  context.subscriptions.push(
+    vscode.lm.registerTool(
+      "journal-tools_readJournalTasks",
+      new ReadJournalTasksTool()
     )
   );
   context.subscriptions.push(

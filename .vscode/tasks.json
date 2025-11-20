@@ -1,11 +1,107 @@
 // See https://go.microsoft.com/fwlink/?LinkId=733558
 // for the documentation about the tasks.json format
+// {
+//   "label": "compile",
+//   "name": "build",
+//   "type": "npm",
+//   "script": "compile",
+//   "presentation": {
+//     "reveal": "never"
+//   },
+//   "group": {
+//     "kind": "build",
+//     "isDefault": false
+//   }
+// },
+// {
+//   "label": "watch",
+//   "name": "watch",
+//   "type": "npm",
+//   "script": "watch",
+//   "problemMatcher": "$tsc-watch",
+//   "isBackground": true,
+//   "presentation": {
+//     "reveal": "never"
+//   },
+//   "group": {
+//     "kind": "build",
+//     "isDefault": true
+//   }
+// },
+// {
+//   "type": "npm",
+//   "name": "Watch ESBuild",
+//   "script": "watch:esbuild",
+//   "group": "build",
+//   "problemMatcher": "$esbuild-watch",
+//   "isBackground": true,
+//   "label": "npm: watch:esbuild",
+//   "presentation": {
+//     "group": "watch",
+//     "reveal": "never"
+//   }
+// },
+// {
+//   "type": "npm",
+//   "name": "Watch TSC",
+//   "script": "watch:tsc",
+//   "group": "build",
+//   "problemMatcher": "$tsc-watch",
+//   "isBackground": true,
+//   "label": "npm: watch:tsc",
+//   "presentation": {
+//     "group": "watch",
+//     "reveal": "never"
+//   }
+// },
+// {
+//   "label": "versionlens npm install",
+//   "command": "npm",
+//   "type": "shell",
+//   "args": [
+//     "install"
+//   ],
+//   "options": {
+//     "cwd": "${fileDirname}"
+//   },
+//   "presentation": {
+//     "echo": true,
+//     "reveal": "always",
+//     "panel": "shared",
+//     "clear": true
+//   },
+//   "problemMatcher": []
+// }
 {
   "version": "2.0.0",
   "tasks": [
+    // {
+    //   "type": "npm",
+    //   "script": "watch",
+    //   "problemMatcher": "$tsc-watch",
+    //   "isBackground": true,
+    //   "presentation": {
+    //     "reveal": "never"
+    //   },
+    //   "group": {
+    //     "kind": "build",
+    //     "isDefault": true
+    //   }
+    // },
+    // {
+    //   "type": "npm",
+    //   "script": "watch:esbuild",
+    //   "group": "build",
+    //   "problemMatcher": [],
+    //   "label": "npm: watch:esbuild",
+    //   "detail": "node esbuild.js --watch"
+    // },
     {
-      "label": "watch",
-      "dependsOn": ["npm: watch:tsc", "npm: watch:esbuild"],
+      "label": "build:all:watch",
+      "dependsOn": [
+        "npm: check-types:watch",
+        "npm: build:watch"
+      ],
       "presentation": {
         "reveal": "never"
       },
@@ -16,11 +112,11 @@
     },
     {
       "type": "npm",
-      "script": "watch:esbuild",
+      "script": "check-types:watch",
       "group": "build",
-      "problemMatcher": "$esbuild-watch",
+      "problemMatcher": "$tsc-watch",
       "isBackground": true,
-      "label": "npm: watch:esbuild",
+      "label": "npm: check-types:watch",
       "presentation": {
         "group": "watch",
         "reveal": "never"
@@ -28,34 +124,45 @@
     },
     {
       "type": "npm",
-      "script": "watch:tsc",
+      "script": "build:watch",
       "group": "build",
-      "problemMatcher": "$tsc-watch",
+      "problemMatcher": "$esbuild-watch",
       "isBackground": true,
-      "label": "npm: watch:tsc",
+      "label": "npm: build:watch",
       "presentation": {
         "group": "watch",
         "reveal": "never"
       }
     },
     {
-      "label": "versionlens npm install", // task label name
+      "type": "npm",
+      "script": "build:test:watch",
+      "group": "build",
+      "problemMatcher": "$tsc-watch",
+      "isBackground": true,
+      "label": "npm: build:test:watch",
+      "presentation": {
+        "group": "watch",
+        "reveal": "never"
+      }
+    },
+    {
+      "label": "versionlens npm install",
       "command": "npm",
       "type": "shell",
       "args": [
         "install"
       ],
       "options": {
-        // sets the cwd to the current file dir
         "cwd": "${fileDirname}"
       },
-      // customizable settings
       "presentation": {
         "echo": true,
         "reveal": "always",
         "panel": "shared",
-        "clear": true,
+        "clear": true
       },
+      "problemMatcher": []
     }
   ]
 }

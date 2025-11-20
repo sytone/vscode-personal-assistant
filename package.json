@@ -12,7 +12,7 @@
     "url": "https://github.com/sytone/vscode-personal-assistant/issues"
   },
   "homepage": "https://github.com/sytone/vscode-personal-assistant#readme",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "license": "MIT",
   "engines": {
     "vscode": "^1.105.0"
@@ -650,8 +650,7 @@
     "build:test:watch": "tsc --project tsconfig.test.json --watch",
     "build:all": "run-p build build:test",
     "build:all:watch": "run-p check-types:watch build:watch",
-
-    "check-types:watch": "tsc --noEmit --watch",    
+    "check-types:watch": "tsc --noEmit --watch",
     "compile-tests": "tsc -p . --outDir out",
     "pretest": "npm run compile-tests",
     "lint": "eslint src",

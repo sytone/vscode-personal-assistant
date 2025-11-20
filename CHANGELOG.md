@@ -1,3 +1,15 @@
+## [1.1.0](https://github.com/sytone/vscode-personal-assistant/compare/v1.0.0...v1.1.0) (2025-11-20)
+
+### Features
+
+* **esbuild:** log build start time in watch mode ([11690ae](https://github.com/sytone/vscode-personal-assistant/commit/11690aec317398be6f1015160562b756235882f6))
+* **note-management:** implement comprehensive note management tools ([379ae28](https://github.com/sytone/vscode-personal-assistant/commit/379ae28b7035bc32ca300a52be6a8d52f3f61249))
+* **tests:** add template service tests and note tool enhancements ([2022908](https://github.com/sytone/vscode-personal-assistant/commit/2022908880e5071f916b652c5f9dcd2af81ea35a))
+
+### Code Refactoring
+
+* **vscode:** update launch and task configurations ([6b6686d](https://github.com/sytone/vscode-personal-assistant/commit/6b6686db2dc3dca64fc3c37d53752b7e16dc19ba))
+
 ## 1.0.0 (2025-11-04)
 
 ### Features

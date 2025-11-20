@@ -36,7 +36,8 @@ const esbuildProblemMatcherPlugin = {
 
     setup(build) {
         build.onStart(() => {
-            console.log('[watch] build started');
+            const startTime = new Date().toLocaleTimeString();
+            console.log(`[watch] build started at ${startTime}`);
         });
         build.onEnd(result => {
             result.errors.forEach(({ text, location }) => {

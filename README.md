@@ -136,3 +136,10 @@ Contributions are welcome! Please ensure all code includes:
 See [LICENSE](LICENSE) file for details.
 
 **Enjoy your AI-powered personal knowledge assistant!**
+
+
+## Reference Links
+
+These are links to pages that I used in the creation of this extension.
+
+- https://github.com/vscode-shellcheck/vscode-shellcheck

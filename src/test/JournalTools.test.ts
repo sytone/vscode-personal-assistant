@@ -377,6 +377,55 @@ suite('Journal Tools Test Suite', () => {
       assert.ok(content.match(/- \d{2}:\d{2} - Entry with leading dash/), 'Should format correctly');
     });
 
+    test('should strip leading timestamp from entry content', async function () {
+      this.timeout(MARKDOWNLINT_TIMEOUT);
+      const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');
+
+      const initialContent = [
+        '# Week 44 in 2025',
+        '',
+        '## 30 Thursday',
+        ''
+      ].join('\n');
+
+      await writeJournalFile(weeklyFilePath, initialContent);
+
+      const tool = new AddJournalEntryTool();
+      
+      // Test various timestamp formats that should be stripped
+      const testCases = [
+        { input: '16:16 - yes, getting up early', expected: 'yes, getting up early' },
+        { input: '09:30 - morning meeting notes', expected: 'morning meeting notes' },
+        { input: '14:45 - afternoon task', expected: 'afternoon task' },
+        { input: '- 16:16 - with leading dash too', expected: 'with leading dash too' },
+      ];
+
+      for (const testCase of testCases) {
+        await tool.invoke({
+          input: {
+            entryContent: testCase.input,
+            date: '2025-10-30'
+          },
+          options: {}
+        } as any, {} as vscode.CancellationToken);
+      }
+
+      const content = await readJournalFile(weeklyFilePath);
+      const lines = content.split(/\r?\n/);
+
+      // Should not have duplicate timestamps like "- 16:16 - 16:16 - content"
+      const timestampPattern = /^- (\d{2}:\d{2}) - (\d{2}:\d{2}) -/;
+      const duplicateTimestamps = lines.filter(l => timestampPattern.test(l));
+      assert.strictEqual(duplicateTimestamps.length, 0, 'Should not have duplicate timestamps');
+
+      // Verify each entry has correct format: "- HH:MM - content" without user's timestamp
+      for (const testCase of testCases) {
+        const expectedPattern = new RegExp(`- \\d{2}:\\d{2} - ${testCase.expected.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`);
+        const hasCorrectFormat = lines.some(l => expectedPattern.test(l));
+        assert.ok(hasCorrectFormat, `Entry should be formatted as "- HH:MM - ${testCase.expected}"`);
+      }
+    });
+
     test('should insert day sections in correct sequential order', async function () {
       this.timeout(MARKDOWNLINT_TIMEOUT);
       const weeklyFilePath = path.join(testJournalPath, '2025', '2025-W44.md');

@@ -11,7 +11,19 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--profile 'Personal Assistant'",
+        "--profile=Personal Assistant",
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "${defaultBuildTask}"
+    },
+    {
+      "name": "Run Extension Help",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--help",
       ],
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"

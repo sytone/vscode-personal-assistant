@@ -491,12 +491,23 @@ export class AddJournalEntryTool implements vscode.LanguageModelTool<IAddJournal
       const headingIndex = lines.findIndex((l) => l.trim() === heading);
       
       const timePrefix = dateService.formatTime(new Date());
-      // Remove leading dash if present, as we add it in the format below
+      
+      // Clean up the entry content:
+      // 1. Remove leading dash if present
+      // 2. Remove leading timestamp (HH:mm - format)
       let entryToInsert = params.entryContent.trimEnd();
+      
+      // Strip leading dash
       if (entryToInsert.startsWith("- ")) {
         entryToInsert = entryToInsert.substring(2);
       } else if (entryToInsert.startsWith("-")) {
         entryToInsert = entryToInsert.substring(1).trimStart();
+      }
+      
+      // Strip leading timestamp pattern (HH:mm - )
+      const timestampPattern = /^\d{1,2}:\d{2}\s*-\s*/;
+      if (timestampPattern.test(entryToInsert)) {
+        entryToInsert = entryToInsert.replace(timestampPattern, '');
       }
       
       if (headingIndex >= 0) {

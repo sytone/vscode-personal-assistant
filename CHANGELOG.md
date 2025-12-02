@@ -1,3 +1,10 @@
+## [1.2.0](https://github.com/sytone/vscode-personal-assistant/compare/v1.1.0...v1.2.0) (2025-12-02)
+
+### Features
+
+* **journal-tools:** enhance entry formatting and add help option ([ae74cb8](https://github.com/sytone/vscode-personal-assistant/commit/ae74cb8dd7b84dc5dc54fdb34578bf28f73e2f3c))
+* **tools:** migrate to adapter-based implementation and add mcp server with same tool surface ([8d2c667](https://github.com/sytone/vscode-personal-assistant/commit/8d2c6677d7092c453c012da7b1631a76542e2391))
+
 ## [1.1.0](https://github.com/sytone/vscode-personal-assistant/compare/v1.0.0...v1.1.0) (2025-11-20)
 
 ### Features

@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/sytone/vscode-personal-assistant/compare/v1.2.0...v1.3.0) (2025-12-02)
+
+### Features
+
+* **journal-tools:** enhance journal intent recognition and date handling ([753055b](https://github.com/sytone/vscode-personal-assistant/commit/753055b38021623320ba8b17c96d8a5d5ec54a4f))
+
 ## [1.2.0](https://github.com/sytone/vscode-personal-assistant/compare/v1.1.0...v1.2.0) (2025-12-02)
 
 ### Features

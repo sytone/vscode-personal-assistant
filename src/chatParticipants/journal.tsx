@@ -50,6 +50,12 @@ export class JournalPrompt extends PromptElement<PromptProps, void> {
                     2. Adding new journal entries based on user prompts.
                     3. Creating journal tasks or reminders for future reflection.
 
+                    ## Recognizing Journal Intent:
+                    - **Explicit requests**: "Add to journal", "journal this", "create an entry"
+                    - **Implicit intent**: When users share experiences, meetings, decisions, reflections, or events conversationally (e.g., "Had a meeting with X about Y", "Figured out the solution to Z", "Decided to do X")
+                    - **Default action**: When in doubt about user intent, ADD the entry - it's better to capture information than lose it
+                    - **Context clues**: Past tense descriptions of activities, mentions of conversations/meetings, reflections on work done
+
                     ## Tool Selection Priority:
                     - **ALWAYS** use `journal-tools_*` for journal entries and tasks (never use note management tools for journal operations)
                     - Use `note-management-tools_*` only for general note management in other parts of the vault
@@ -67,24 +73,26 @@ export class JournalPrompt extends PromptElement<PromptProps, void> {
                     ## Date Handling Protocol:
 
                     ### When to Calculate Dates vs Assume Today:
-                    - **If NO date is mentioned by user**: Assume TODAY and use that as the value when using `date-utility-tools_calculateRelativeDate` to get exact YYYY-MM-DD format
+                    - **If NO date is mentioned by user**: Assume TODAY - do NOT call `date-utility-tools_calculateRelativeDate`, just use today's date directly
                     - **If user specifies relative dates** (e.g., "yesterday", "last week", "two weeks ago"): Use `date-utility-tools_calculateRelativeDate` to get exact YYYY-MM-DD format
                     - **If user specifies exact dates** (e.g., "November 3rd", "2025-11-03"): Use the provided date directly
 
                     ### Conversation Efficiency:
                     - **Reuse date calculations** within the same conversation session when possible
                     - **Don't redundantly calculate dates** you already have from earlier in the conversation
-                    - If you need today's date and haven't calculated it yet, use `date-utility-tools_calculateRelativeDate` with "today"
+                    - If you need today's date and haven't calculated it yet, use `date-utility-tools_calculateRelativeDate` with "today" once, then reuse
 
                     ### Examples:
-                    - ✅ User: "add an entry about the meeting" → Assume TODAY, don't calculate
-                    - ✅ User: "add an entry for yesterday about the meeting" → Calculate "yesterday" 
+                    - ✅ User: "add an entry about the meeting" → Assume TODAY, pass directly to journal tools
+                    - ✅ User: "add an entry for yesterday about the meeting" → Calculate "yesterday" once
+                    - ✅ User: "Had a meeting with John" → Recognize implicit intent, assume TODAY, add entry
                     - ✅ User: "summarize today" then "add another entry" → Reuse today's date from first calculation
-                    - ❌ Don't calculate "today" when you already know today's date from context
+                    - ❌ Don't calculate "today" repeatedly when you already know today's date from context
 
                     ### Required Format:
                     - Before calling `journal-tools_readJournalEntries` or `journal-tools_addJournalEntry`, ensure you have the correct date in YYYY-MM-DD format
                     - **NEVER** assume or hardcode dates - always calculate relative dates when explicitly mentioned by users
+                    - When no date is mentioned, assume TODAY and use current date
 
 
                 </UserMessage>

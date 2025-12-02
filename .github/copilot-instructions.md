@@ -1,7 +1,45 @@
 # GitHub Copilot Instructions for Personal Assistant Extension
 
 ## Project Overview
-This is a VSCode extension that provides tools for interacting with Obsidian vaults, journal entries, and date utilities through GitHub Copilot chat.
+This is a VSCode extension that provides tools for interacting with Obsidian vaults, journal entries, and date utilities through GitHub Copilot chat. It supports **dual-mode operation**: running as a VS Code extension AND as a standalone Model Context Protocol (MCP) server.
+
+## Architecture
+
+### Dual-Mode Architecture
+The project uses a **platform-agnostic core** pattern with **platform-specific adapters**:
+
+```
+src/
+├── core/                    # Platform-agnostic business logic
+│   ├── types/              # Shared type definitions
+│   │   ├── ToolContext.ts  # IToolContext, IToolResult, IConfigProvider
+│   │   └── JournalParameters.ts  # Parameter interfaces
+│   └── tools/              # Core tool implementations
+│       └── JournalToolCore.ts  # Journal business logic
+├── adapters/               # Platform-specific implementations
+│   └── vscode/
+│       ├── VSCodeConfigProvider.ts  # VS Code config adapter
+│       └── tools/
+│           └── JournalToolAdapters.ts  # VS Code tool wrappers
+├── tools/                  # Legacy VS Code tools (being migrated)
+├── services/               # Shared services (DateService, TemplateService)
+├── mcp-server.ts          # MCP server entry point
+└── extension.ts           # VS Code extension entry point
+```
+
+**Key Principles**:
+- **Core layer**: No VS Code dependencies, uses dependency injection
+- **Adapters**: Convert between platform APIs and core interfaces
+- **Services**: Shared utilities (date operations, template rendering)
+- **Result pattern**: Core methods return `IToolResult` instead of throwing exceptions
+
+### When Adding New Tools
+1. **Define parameter interface** in `src/core/types/` (e.g., `JournalParameters.ts`)
+2. **Implement core logic** in `src/core/tools/` (platform-agnostic)
+3. **Create VS Code adapter** in `src/adapters/vscode/tools/`
+4. **Register in VS Code** via `src/tools/tools.ts`
+5. **Register in MCP server** via `src/mcp-server.ts` (tool list + handler)
+6. **Update package.json** with tool definition for VS Code
 
 ## Development Philosophy
 
@@ -516,15 +554,58 @@ const value = config.get<string>("settingName") || DEFAULT_VALUE;
 
 ```
 src/
-├── extension.ts          # Extension activation, vault root management
-├── tools/
-│   ├── tools.ts         # Tool registration
-│   ├── JournalTools.ts  # Journal-related tools
-│   ├── DateUtilityTools.ts  # Date calculation tools
-│   └── FindFilesTool.ts # File search tool
-└── commands/
-    └── commands.ts      # VSCode commands
+├── extension.ts              # VS Code extension entry point, vault root management
+├── mcp-server.ts            # MCP server entry point (stdio transport)
+├── core/                    # Platform-agnostic business logic
+│   ├── types/
+│   │   ├── ToolContext.ts   # IToolContext, IToolResult, IConfigProvider
+│   │   └── JournalParameters.ts  # Journal tool parameter interfaces
+│   └── tools/
+│       └── JournalToolCore.ts  # Journal business logic (addEntry, readEntries, etc.)
+├── adapters/                # Platform-specific adapters
+│   └── vscode/
+│       ├── VSCodeConfigProvider.ts  # VS Code configuration adapter
+│       └── tools/
+│           └── JournalToolAdapters.ts  # VS Code Language Model Tool wrappers
+├── services/                # Shared services (platform-agnostic)
+│   ├── DateService.ts       # Date calculations, ISO weeks, parsing
+│   └── TemplateService.ts   # Markdown template rendering
+├── tools/                   # Legacy VS Code tools (being phased out)
+│   ├── tools.ts            # Tool registration
+│   ├── JournalTools.ts     # Legacy journal tools (kept for reference)
+│   ├── DateUtilityTools.ts # Date calculation tools
+│   ├── NoteManagementTools.ts  # Note CRUD operations
+│   ├── FindFilesTool.ts    # File search tool
+│   └── RunInTerminalTool.ts  # Terminal execution
+├── commands/
+│   └── commands.ts         # VS Code commands
+├── chatParticipants/       # Chat participant implementations
+└── test/                   # Test suites
+    ├── JournalTools.test.ts
+    ├── TemplateService.test.ts
+    └── ...
 ```
+
+## TODO Management
+
+**Important**: When identifying future work, create inline TODOs with clear prompts for delegation:
+
+```typescript
+// TODO: Extract markdown formatting logic to core layer
+// Prompt: "Extract formatMarkdownContent from JournalTools.ts to JournalToolCore.ts. 
+// Create a MarkdownFormatterService with formatContent(content: string): Promise<string>
+// that applies markdownlint rules. Inject as dependency in JournalToolCore constructor.
+// Update all callers to use the injected service."
+async formatMarkdownContent(content: string): Promise<string> {
+    return content; // Stub implementation
+}
+```
+
+**TODO Format**:
+- Start with `// TODO:` followed by brief description
+- Add `// Prompt:` on next line with detailed instructions for an AI agent
+- Include: what to extract, where to put it, interface/signature, dependencies, update steps
+- Keep prompt self-contained and actionable
 
 ## Remember
 
@@ -532,6 +613,9 @@ src/
 - ✅ **Verify tests fail** before implementing
 - ✅ **Make tests pass** with minimal code (TDD Green phase)
 - ✅ **Refactor** while keeping tests green (TDD Refactor phase)
+- ✅ **Use core layer** for new tools (platform-agnostic)
+- ✅ **Create adapters** for VS Code integration
+- ✅ **Register in both** VS Code and MCP server
 - ✅ Create one tool at a time
 - ✅ Wait for confirmation between steps
 - ✅ Test thoroughly before moving to next tool
@@ -539,4 +623,5 @@ src/
 - ✅ Provide clear error messages
 - ✅ Follow existing code patterns
 - ✅ Keep tool IDs consistent across all three locations
-- ✅ Document complex logic with comments
+- ✅ Document complex logic with JSDoc comments
+- ✅ **Add TODOs with prompts** for future work

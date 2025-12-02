@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as fs from 'fs/promises';
 import * as os from 'os';
 import { TemplateService } from '../services/TemplateService';
-import { setTemplatesFolderNameForTesting, setVaultRootForTesting } from '../extension';
 
 suite('TemplateService', () => {
   let testWorkspaceRoot: string;
@@ -24,14 +23,10 @@ suite('TemplateService', () => {
     testWorkspaceRoot = await createTestWorkspace();
     templatesDir = path.join(testWorkspaceRoot, 'Templates');
     await fs.mkdir(templatesDir, { recursive: true });
-    setVaultRootForTesting(testWorkspaceRoot);
-    setTemplatesFolderNameForTesting(null);
     service = new TemplateService();
   });
 
   teardown(async () => {
-    setVaultRootForTesting(null);
-    setTemplatesFolderNameForTesting(null);
     await cleanupWorkspace(testWorkspaceRoot);
   });
 
@@ -46,14 +41,19 @@ suite('TemplateService', () => {
     ].join('\n');
     await fs.writeFile(templatePath, templateContent, 'utf-8');
 
-    const rendered = await service.renderTemplate('weekly-journal.md', {
-      year: 2025,
-      weekNumber: 44,
-      days: [
-        { dayNumber: 17, dayName: 'Monday' },
-        { dayNumber: 18, dayName: 'Tuesday' }
-      ]
-    });
+    const rendered = await service.renderTemplate(
+      'weekly-journal.md',
+      testWorkspaceRoot,
+      'Templates',
+      {
+        year: 2025,
+        weekNumber: 44,
+        days: [
+          { dayNumber: 17, dayName: 'Monday' },
+          { dayNumber: 18, dayName: 'Tuesday' }
+        ]
+      }
+    );
 
     assert.ok(rendered);
     assert.ok(rendered?.includes('# Week 44 in 2025'));
@@ -69,28 +69,42 @@ suite('TemplateService', () => {
     ].join('\n');
     await fs.writeFile(templatePath, templateContent, 'utf-8');
 
-    const rendered = await service.renderTemplate('summary', {
-      summary: 'All done!'
-    });
+    const rendered = await service.renderTemplate(
+      'summary',
+      testWorkspaceRoot,
+      'Templates',
+      {
+        summary: 'All done!'
+      }
+    );
 
     assert.ok(rendered?.includes('Summary: All done!'));
     assert.ok(!rendered?.includes('Footer:'));
   });
 
   test('renderTemplate should return null when template missing', async () => {
-    const rendered = await service.renderTemplate('does-not-exist.md', {});
+    const rendered = await service.renderTemplate(
+      'does-not-exist.md',
+      testWorkspaceRoot,
+      'Templates',
+      {}
+    );
     assert.strictEqual(rendered, null);
   });
 
   test('renderTemplate should honor custom templates folder setting', async () => {
     const customDir = path.join(testWorkspaceRoot, 'CustomTemplates');
     await fs.mkdir(customDir, { recursive: true });
-    setTemplatesFolderNameForTesting('CustomTemplates');
 
     const templatePath = path.join(customDir, 'note.md');
     await fs.writeFile(templatePath, 'Hello {{name}}', 'utf-8');
 
-    const rendered = await service.renderTemplate('note', { name: 'Vault' });
+    const rendered = await service.renderTemplate(
+      'note',
+      testWorkspaceRoot,
+      'CustomTemplates',
+      { name: 'Vault' }
+    );
     assert.strictEqual(rendered, 'Hello Vault');
   });
 
@@ -101,7 +115,12 @@ suite('TemplateService', () => {
     const fixedTimestamp = new Date(2025, 10, 18, 7, 52, 0); // Months are 0-based
     const deterministicService = new TemplateService(() => fixedTimestamp);
 
-    const rendered = await deterministicService.renderTemplate('timestamp', {});
+    const rendered = await deterministicService.renderTemplate(
+      'timestamp',
+      testWorkspaceRoot,
+      'Templates',
+      {}
+    );
     assert.strictEqual(rendered, 'Generated at 2025-11-18T07:52');
   });
 });

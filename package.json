@@ -22,6 +22,9 @@
   ],
   "activationEvents": [],
   "main": "./dist/extension",
+  "bin": {
+    "personal-assistant-mcp": "./dist/mcp-server.mjs"
+  },
   "contributes": {
     "chatParticipants": [
       {
@@ -644,6 +647,8 @@
     "old:compile": "tsc -p ./",
     "old:watch": "tsc -watch -p ./",
     "build": "npm run check-types && node esbuild.js",
+    "build:extension": "npm run check-types && node esbuild.js --mode=extension",
+    "build:mcp": "npm run check-types && node esbuild.js --mode=mcp",
     "build:watch": "node esbuild.js --watch",
     "build:prod": "npm run check-types && node esbuild.js --production",
     "build:test": "tsc --project tsconfig.test.json",
@@ -667,9 +672,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.13.0",
-    "@stylistic/eslint-plugin": "^2.9.0",
     "@semantic-release/changelog": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
+    "@stylistic/eslint-plugin": "^2.9.0",
     "@types/mdast": "^4.0.4",
     "@types/mocha": "^10.0.10",
     "@types/node": "22.x",
@@ -688,6 +693,7 @@
     "typescript-eslint": "^8.39.0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.22.0",
     "@vscode/chat-extension-utils": "^0.0.0-alpha.1",
     "@vscode/prompt-tsx": "^0.3.0-alpha.14",
     "markdownlint": "^0.39.0",

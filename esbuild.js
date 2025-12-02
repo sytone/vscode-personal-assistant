@@ -2,31 +2,7 @@ const esbuild = require('esbuild');
 
 const production = process.argv.includes('--production');
 const watch = process.argv.includes('--watch');
-
-async function main() {
-    const ctx = await esbuild.context({
-        entryPoints: ['src/extension.ts'],
-        bundle: true,
-        format: 'cjs',
-        minify: production,
-        sourcemap: !production,
-        sourcesContent: false,
-        platform: 'node',
-        outfile: 'dist/extension.js',
-        external: ['vscode'],
-        logLevel: 'warning',
-        plugins: [
-            /* add to the end of plugins array */
-            esbuildProblemMatcherPlugin
-        ]
-    });
-    if (watch) {
-        await ctx.watch();
-    } else {
-        await ctx.rebuild();
-        await ctx.dispose();
-    }
-}
+const mode = process.argv.find(arg => arg.startsWith('--mode='))?.split('=')[1] || 'all';
 
 /**
  * @type {import('esbuild').Plugin}
@@ -49,6 +25,60 @@ const esbuildProblemMatcherPlugin = {
         });
     }
 };
+
+/**
+ * Build configuration for VS Code extension
+ */
+const extensionConfig = {
+    entryPoints: ['src/extension.ts'],
+    bundle: true,
+    format: 'cjs',
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: 'node',
+    outfile: 'dist/extension.js',
+    external: ['vscode'],
+    logLevel: 'warning',
+    plugins: [esbuildProblemMatcherPlugin],
+};
+
+/**
+ * Build configuration for MCP server
+ */
+const mcpConfig = {
+    entryPoints: ['src/mcp-server.ts'],
+    bundle: true,
+    format: 'esm',
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: 'node',
+    outfile: 'dist/mcp-server.mjs',
+    logLevel: 'warning',
+    plugins: [esbuildProblemMatcherPlugin],
+};
+
+async function main() {
+    const configs = [];
+    
+    if (mode === 'extension' || mode === 'all') {
+        configs.push(extensionConfig);
+    }
+    
+    if (mode === 'mcp' || mode === 'all') {
+        configs.push(mcpConfig);
+    }
+    
+    const contexts = await Promise.all(configs.map(config => esbuild.context(config)));
+    
+    if (watch) {
+        await Promise.all(contexts.map(ctx => ctx.watch()));
+    } else {
+        await Promise.all(contexts.map(ctx => ctx.rebuild()));
+        await Promise.all(contexts.map(ctx => ctx.dispose()));
+    }
+}
 
 main().catch(e => {
     console.error(e);

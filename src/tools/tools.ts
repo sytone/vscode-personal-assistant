@@ -1,19 +1,29 @@
 import * as vscode from "vscode";
 import { FindFilesTool } from "./FindFilesTool";
 import { RunInTerminalTool } from "./RunInTerminalTool";
-import { ReadJournalEntriesTool, AddJournalEntryTool, AddJournalTaskTool, CompleteJournalTaskTool, ReadJournalTasksTool } from "./JournalTools";
-import { CalculateRelativeDateTool, GetDateInfoTool, GetWeekDatesTool } from "./DateUtilityTools";
 import {
-  ListFilesTool,
-  SearchFilesByNameTool,
-  SearchFilesByContentTool,
-  SearchNotesByFrontmatterTool,
-  ReadNoteTool,
-  CreateNoteTool,
-  UpdateNoteTool,
-  UpdateNoteFrontmatterTool,
-  DeleteNoteTool,
-} from "./NoteManagementTools";
+	AddJournalEntryToolAdapter,
+	ReadJournalEntriesToolAdapter,
+	AddJournalTaskToolAdapter,
+	CompleteJournalTaskToolAdapter,
+	ReadJournalTasksToolAdapter,
+} from "../adapters/vscode/tools/JournalToolAdapters";
+import {
+	CalculateRelativeDateToolAdapter,
+	GetDateInfoToolAdapter,
+	GetWeekDatesToolAdapter,
+} from "../adapters/vscode/tools/DateUtilityToolAdapters";
+import {
+	ListFilesToolAdapter,
+	SearchFilesByNameToolAdapter,
+	SearchFilesByContentToolAdapter,
+	SearchNotesByFrontmatterToolAdapter,
+	ReadNoteToolAdapter,
+	CreateNoteToolAdapter,
+	UpdateNoteToolAdapter,
+	UpdateNoteFrontmatterToolAdapter,
+	DeleteNoteToolAdapter,
+} from "../adapters/vscode/tools/NoteManagementToolAdapters";
 
 export function registerChatTools(context: vscode.ExtensionContext) {
   // context.subscriptions.push(vscode.lm.registerTool('chat-tools-sample_tabCount', new TabCountTool()));
@@ -29,49 +39,49 @@ export function registerChatTools(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.lm.registerTool(
       "journal-tools_readJournalEntries",
-      new ReadJournalEntriesTool()
+      new ReadJournalEntriesToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "journal-tools_addJournalEntry",
-      new AddJournalEntryTool()
+      new AddJournalEntryToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "journal-tools_addJournalTask",
-      new AddJournalTaskTool()
+      new AddJournalTaskToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "journal-tools_completeJournalTask",
-      new CompleteJournalTaskTool()
+      new CompleteJournalTaskToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "journal-tools_readJournalTasks",
-      new ReadJournalTasksTool()
+      new ReadJournalTasksToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "date-utility-tools_calculateRelativeDate",
-      new CalculateRelativeDateTool()
+      new CalculateRelativeDateToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "date-utility-tools_getDateInfo",
-      new GetDateInfoTool()
+      new GetDateInfoToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "date-utility-tools_getWeekDates",
-      new GetWeekDatesTool()
+      new GetWeekDatesToolAdapter()
     )
   );
 
@@ -79,55 +89,55 @@ export function registerChatTools(context: vscode.ExtensionContext) {
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_listFiles",
-      new ListFilesTool()
+      new ListFilesToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_searchFilesByName",
-      new SearchFilesByNameTool()
+      new SearchFilesByNameToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_searchFilesByContent",
-      new SearchFilesByContentTool()
+      new SearchFilesByContentToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_searchNotesByFrontmatter",
-      new SearchNotesByFrontmatterTool()
+      new SearchNotesByFrontmatterToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_readNote",
-      new ReadNoteTool()
+      new ReadNoteToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_createNote",
-      new CreateNoteTool()
+      new CreateNoteToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_updateNote",
-      new UpdateNoteTool()
+      new UpdateNoteToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_updateNoteFrontmatter",
-      new UpdateNoteFrontmatterTool()
+      new UpdateNoteFrontmatterToolAdapter()
     )
   );
   context.subscriptions.push(
     vscode.lm.registerTool(
       "note-management-tools_deleteNote",
-      new DeleteNoteTool()
+      new DeleteNoteToolAdapter()
     )
   );
 }

@@ -1,38 +1,10 @@
-import * as vscode from "vscode";
-
-interface IFindFilesParameters {
-  pattern: string;
-}
-
-export class FindFilesTool
-  implements vscode.LanguageModelTool<IFindFilesParameters>
-{
-  async invoke(
-    options: vscode.LanguageModelToolInvocationOptions<IFindFilesParameters>,
-    token: vscode.CancellationToken
-  ) {
-    const params = options.input as IFindFilesParameters;
-    const files = await vscode.workspace.findFiles(
-      params.pattern,
-      "**/node_modules/**",
-      undefined,
-      token
-    );
-
-    const strFiles = files.map((f) => f.fsPath).join("\n");
-    return new vscode.LanguageModelToolResult([
-      new vscode.LanguageModelTextPart(
-        `Found ${files.length} files matching "${params.pattern}":\n${strFiles}`
-      ),
-    ]);
-  }
-
-  async prepareInvocation(
-    options: vscode.LanguageModelToolInvocationPrepareOptions<IFindFilesParameters>,
-    _token: vscode.CancellationToken
-  ) {
-    return {
-      invocationMessage: `Searching workspace for "${options.input.pattern}"`,
-    };
-  }
-}
+/**
+ * @deprecated Legacy export for backward compatibility.
+ * This file now re-exports the adapter-based implementation.
+ *
+ * The FindFilesTool has been migrated to the dual-mode architecture:
+ * - Core logic: src/core/tools/FindFilesToolCore.ts
+ * - VS Code adapter: src/adapters/vscode/tools/FindFilesToolAdapter.ts
+ * - MCP server: Registered in src/mcp-server.ts
+ */
+export { FindFilesToolAdapter as FindFilesTool } from "../adapters/vscode/tools/FindFilesToolAdapter.js";

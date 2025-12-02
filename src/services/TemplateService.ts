@@ -1,6 +1,5 @@
 import * as path from "path";
 import * as fs from "fs/promises";
-import { getTemplatesFolderName, getVaultRoot } from "../extension";
 
 /**
  * Provides simple template rendering capabilities for markdown files stored in the vault.
@@ -22,11 +21,16 @@ import { getTemplatesFolderName, getVaultRoot } from "../extension";
  * @example
  * ```typescript
  * const service = new TemplateService();
- * const content = await service.renderTemplate('journal-weekly', {
- *   weekNumber: 44,
- *   year: 2025,
- *   days: [{ dayNumber: 30, dayName: 'Thursday' }]
- * });
+ * const content = await service.renderTemplate(
+ *   'journal-weekly',
+ *   '/path/to/vault',
+ *   'Templates',
+ *   {
+ *     weekNumber: 44,
+ *     year: 2025,
+ *     days: [{ dayNumber: 30, dayName: 'Thursday' }]
+ *   }
+ * );
  * ```
  */
 export class TemplateService {
@@ -45,14 +49,18 @@ export class TemplateService {
    * Render a template file using the supplied data.
    *
    * @param templateName - Template file name or identifier (extension optional)
+   * @param vaultRoot - Absolute path to the vault root directory
+   * @param templatesFolderName - Name of the templates folder (relative to vault root)
    * @param data - Arbitrary data available to the template tokens
    * @returns Rendered content or null if the template file is missing or vault unavailable
    */
   async renderTemplate(
     templateName: string,
+    vaultRoot: string,
+    templatesFolderName: string,
     data: Record<string, unknown>
   ): Promise<string | null> {
-    const templateContent = await this.loadTemplateContent(templateName);
+    const templateContent = await this.loadTemplateContent(templateName, vaultRoot, templatesFolderName);
     if (!templateContent) {
       return null;
     }
@@ -61,9 +69,13 @@ export class TemplateService {
     return rendered;
   }
 
-  private async loadTemplateContent(templateName: string): Promise<string | null> {
+  private async loadTemplateContent(
+    templateName: string,
+    vaultRoot: string,
+    templatesFolderName: string
+  ): Promise<string | null> {
     const fileName = this.ensureExtension(templateName);
-    const templatePath = this.resolveTemplatePath(fileName);
+    const templatePath = this.resolveTemplatePath(fileName, vaultRoot, templatesFolderName);
     if (!templatePath) {
       return null;
     }
@@ -82,14 +94,12 @@ export class TemplateService {
     return `${templateName}.md`;
   }
 
-  private resolveTemplatePath(fileName: string): string | null {
-    const vaultRoot = getVaultRoot();
-    if (!vaultRoot) {
-      return null;
-    }
-
-    const templateFolder = getTemplatesFolderName();
-    const templateRoot = path.join(vaultRoot, templateFolder);
+  private resolveTemplatePath(
+    fileName: string,
+    vaultRoot: string,
+    templatesFolderName: string
+  ): string | null {
+    const templateRoot = path.join(vaultRoot, templatesFolderName);
     const resolvedPath = path.resolve(templateRoot, fileName);
     if (!resolvedPath.startsWith(templateRoot)) {
       return null;
